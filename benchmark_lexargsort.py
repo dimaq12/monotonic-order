@@ -7,7 +7,7 @@ import time
 
 import numpy as np
 
-from ideal_order import radix_lexargsort
+from monotonic_order import radix_lexargsort
 
 
 def median_seconds(function, repeats: int = 7) -> float:
@@ -31,7 +31,7 @@ def main() -> None:
     actual = radix_lexargsort(*fields)
     expected = np.lexsort(tuple(reversed(fields)))
     print(f"Stable 4-field lexargsort, N={size:,}")
-    print(f"IdealOrder: {ideal*1e3:.3f} ms")
+    print(f"MonotonicOrder: {ideal*1e3:.3f} ms")
     print(f"NumPy:      {numpy*1e3:.3f} ms")
     print(f"Speedup:    {numpy/ideal:.2f}x")
     print(f"Exact:      {np.array_equal(actual, expected)}")

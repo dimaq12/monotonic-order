@@ -3,7 +3,7 @@
 
 /*
  * The Python layer uses ctypes against this extension's shared-object file.
- * The actual ideal_order_* symbols are compiled in from ideal_order.c as a
+ * The actual monotonic_order_* symbols are compiled in from monotonic_order.c as a
  * second Extension source. This tiny module supplies the required PyInit
  * entry point while keeping the public C API usable by non-Python callers.
  */
@@ -11,7 +11,7 @@
 static struct PyModuleDef native_module = {
     PyModuleDef_HEAD_INIT,
     "_native",
-    "Native IdealOrder core.",
+    "Native MonotonicOrder core.",
     -1,
     NULL,
     NULL,

@@ -1,4 +1,4 @@
-# Contributing to IdealOrder
+# Contributing to MonotonicOrder
 
 Contributions are welcome when they preserve the project's central contract:
 payloads are ordered through explicit monotonic keys and the native radix kernel
@@ -7,7 +7,7 @@ does not call arbitrary Python comparators.
 ## Development setup
 
 ```bash
-git clone https://github.com/dimaq12/order.git
+git clone https://github.com/dimaq12/monotonic-order.git
 cd order
 python -m pip install -e ".[test]"
 python -m pytest

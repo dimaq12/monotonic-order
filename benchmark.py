@@ -8,17 +8,17 @@ import time
 import os
 import sys
 
-if os.environ.get("IDEAL_ORDER_BENCH_ENV") != "1":
+if os.environ.get("MONOTONIC_ORDER_BENCH_ENV") != "1":
     env = os.environ.copy()
     env.setdefault("OMP_NUM_THREADS", "3")
     env.setdefault("OMP_PROC_BIND", "close")
     env.setdefault("OMP_PLACES", "cores")
-    env["IDEAL_ORDER_BENCH_ENV"] = "1"
+    env["MONOTONIC_ORDER_BENCH_ENV"] = "1"
     os.execve(sys.executable, [sys.executable, __file__], env)
 
 import numpy as np
 
-from ideal_order import IdealOrder
+from monotonic_order import MonotonicOrder
 
 
 REPEATS = 9
@@ -52,7 +52,7 @@ def equal_with_nan(a: np.ndarray, b: np.ndarray) -> bool:
     return np.array_equal(np.isnan(a), np.isnan(b)) and np.array_equal(a[~np.isnan(a)], b[~np.isnan(b)])
 
 
-print("idealOrder benchmark")
+print("MonotonicOrder benchmark")
 print(f"Python {platform.python_version()} | NumPy {np.__version__} | {platform.processor() or platform.machine()}")
 print("Timing includes Python call and output/workspace allocation; median of", REPEATS)
 print()
@@ -63,9 +63,9 @@ rows = []
 for kind in ("normal", "uniform", "duplicates", "reversed"):
     for n in SIZES:
         x = make_data(kind, n)
-        IdealOrder.sort(x)
+        MonotonicOrder.sort(x)
         np.sort(x, kind="quicksort")
-        ideal_ms, ideal_result = elapsed_ms(lambda: IdealOrder.sort(x))
+        ideal_ms, ideal_result = elapsed_ms(lambda: MonotonicOrder.sort(x))
         numpy_ms, numpy_result = elapsed_ms(lambda: np.sort(x, kind="quicksort"))
         exact = equal_with_nan(ideal_result, numpy_result)
         speedup = numpy_ms / ideal_ms
@@ -75,7 +75,7 @@ for kind in ("normal", "uniform", "duplicates", "reversed"):
 print("\nCompact model")
 training = rng.standard_normal(1_000_000)
 t0 = time.perf_counter_ns()
-model = IdealOrder(training, n_bins=256)
+model = MonotonicOrder(training, n_bins=256)
 build_ms = (time.perf_counter_ns() - t0) / 1e6
 queries = rng.uniform(model.min, model.max, 100_000)
 approx = model.rank_array(queries)

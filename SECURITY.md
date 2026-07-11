@@ -1,6 +1,6 @@
 # Security policy
 
-IdealOrder contains native C code and processes caller-provided array buffers.
+MonotonicOrder contains native C code and processes caller-provided array buffers.
 Please do not open a public issue for a suspected memory-safety vulnerability.
 
 Use GitHub's private vulnerability reporting for this repository when available.

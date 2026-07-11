@@ -14,7 +14,7 @@ libraries = ["m"] if sys.platform != "win32" else []
 
 # Portable wheels must not use -march=native. OpenMP is opt-in because many
 # macOS/Windows toolchains do not ship a compatible runtime by default.
-if os.environ.get("IDEAL_ORDER_OPENMP") == "1":
+if os.environ.get("MONOTONIC_ORDER_OPENMP") == "1":
     if sys.platform == "win32":
         compile_args.append("/openmp")
     else:
@@ -24,8 +24,8 @@ if os.environ.get("IDEAL_ORDER_OPENMP") == "1":
 setup(
     ext_modules=[
         Extension(
-            "ideal_order._native",
-            sources=["src/ideal_order/_native_module.c", "ideal_order.c"],
+            "monotonic_order._native",
+            sources=["src/monotonic_order/_native_module.c", "monotonic_order.c"],
             include_dirs=["."],
             define_macros=[("Py_LIMITED_API", "0x03090000")],
             py_limited_api=True,

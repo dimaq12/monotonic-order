@@ -1,4 +1,4 @@
-#include "ideal_order.h"
+#include "monotonic_order.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -13,7 +13,7 @@
 #define RADIX_MASK (RADIX_SIZE - 1u)
 #define RADIX_PASSES 5u
 
-struct IdealOrder {
+struct MonotonicOrder {
     size_t n;
     size_t n_bins;
     double min_value;
@@ -39,13 +39,13 @@ static double exact_quantile(const double *x, size_t n, double q) {
     return x[lo] + fraction * (x[hi] - x[lo]);
 }
 
-IdealOrder *ideal_order_create(const double *data, size_t n, size_t n_bins) {
+MonotonicOrder *monotonic_order_create(const double *data, size_t n, size_t n_bins) {
     if (data == NULL || n == 0u || n_bins < 2u) {
         return NULL;
     }
 
     double *scratch = (double *)malloc(n * sizeof(double));
-    IdealOrder *order = (IdealOrder *)calloc(1u, sizeof(*order));
+    MonotonicOrder *order = (MonotonicOrder *)calloc(1u, sizeof(*order));
     if (scratch == NULL || order == NULL) {
         free(scratch);
         free(order);
@@ -88,26 +88,26 @@ IdealOrder *ideal_order_create(const double *data, size_t n, size_t n_bins) {
     return order;
 }
 
-void ideal_order_destroy(IdealOrder *order) {
+void monotonic_order_destroy(MonotonicOrder *order) {
     if (order != NULL) {
         free(order->knots);
         free(order);
     }
 }
 
-size_t ideal_order_size(const IdealOrder *order) { return order ? order->n : 0u; }
-size_t ideal_order_bins(const IdealOrder *order) { return order ? order->n_bins : 0u; }
-size_t ideal_order_storage_bytes(const IdealOrder *order) {
+size_t monotonic_order_size(const MonotonicOrder *order) { return order ? order->n : 0u; }
+size_t monotonic_order_bins(const MonotonicOrder *order) { return order ? order->n_bins : 0u; }
+size_t monotonic_order_storage_bytes(const MonotonicOrder *order) {
     return order ? sizeof(*order) + (order->n_bins + 1u) * sizeof(double) : 0u;
 }
-double ideal_order_min(const IdealOrder *o) { return o ? o->min_value : NAN; }
-double ideal_order_max(const IdealOrder *o) { return o ? o->max_value : NAN; }
-double ideal_order_q1(const IdealOrder *o) { return o ? o->q1 : NAN; }
-double ideal_order_median(const IdealOrder *o) { return o ? o->median : NAN; }
-double ideal_order_q3(const IdealOrder *o) { return o ? o->q3 : NAN; }
-double ideal_order_mad(const IdealOrder *o) { return o ? o->mad : NAN; }
+double monotonic_order_min(const MonotonicOrder *o) { return o ? o->min_value : NAN; }
+double monotonic_order_max(const MonotonicOrder *o) { return o ? o->max_value : NAN; }
+double monotonic_order_q1(const MonotonicOrder *o) { return o ? o->q1 : NAN; }
+double monotonic_order_median(const MonotonicOrder *o) { return o ? o->median : NAN; }
+double monotonic_order_q3(const MonotonicOrder *o) { return o ? o->q3 : NAN; }
+double monotonic_order_mad(const MonotonicOrder *o) { return o ? o->mad : NAN; }
 
-static size_t knot_interval(const IdealOrder *order, double value) {
+static size_t knot_interval(const MonotonicOrder *order, double value) {
     size_t lo = 0u;
     size_t hi = order->n_bins + 1u;
     while (lo < hi) {
@@ -123,7 +123,7 @@ static size_t knot_interval(const IdealOrder *order, double value) {
     return lo - 1u;
 }
 
-double ideal_order_rank(const IdealOrder *order, double value) {
+double monotonic_order_rank(const MonotonicOrder *order, double value) {
     if (order == NULL || isnan(value)) return NAN;
     if (value <= order->min_value) return 0.0;
     if (value >= order->max_value) return 1.0;
@@ -136,7 +136,7 @@ double ideal_order_rank(const IdealOrder *order, double value) {
     return base + fraction / (double)order->n_bins;
 }
 
-double ideal_order_quantile(const IdealOrder *order, double q) {
+double monotonic_order_quantile(const MonotonicOrder *order, double q) {
     if (order == NULL || isnan(q)) return NAN;
     if (q <= 0.0) return order->min_value;
     if (q >= 1.0) return order->max_value;
@@ -147,10 +147,10 @@ double ideal_order_quantile(const IdealOrder *order, double q) {
     return order->knots[j] + fraction * (order->knots[j + 1u] - order->knots[j]);
 }
 
-void ideal_order_rank_array(const IdealOrder *order, const double *values,
+void monotonic_order_rank_array(const MonotonicOrder *order, const double *values,
                             size_t n, double *out) {
     if (order == NULL || values == NULL || out == NULL) return;
-    for (size_t i = 0; i < n; ++i) out[i] = ideal_order_rank(order, values[i]);
+    for (size_t i = 0; i < n; ++i) out[i] = monotonic_order_rank(order, values[i]);
 }
 
 static inline uint64_t order_key_u64(double value) {
@@ -216,11 +216,11 @@ static int try_integer_counting_sort(const double *values, size_t n, double *out
     return 1;
 }
 
-unsigned long long ideal_order_key(double value) {
+unsigned long long monotonic_order_key(double value) {
     return (unsigned long long)order_key_u64(value);
 }
 
-int ideal_order_sort(const double *values, size_t n, double *out,
+int monotonic_order_sort(const double *values, size_t n, double *out,
                      double *workspace) {
     if ((n != 0u && (values == NULL || out == NULL || workspace == NULL)) ||
         values == out || out == workspace || values == workspace) {
@@ -398,18 +398,18 @@ int ideal_order_sort(const double *values, size_t n, double *out,
     return 1;
 }
 
-int ideal_order_sort_inplace(double *values, size_t n, double *workspace) {
+int monotonic_order_sort_inplace(double *values, size_t n, double *workspace) {
     if (n == 0u) return 1;
     if (values == NULL || workspace == NULL || values == workspace) return 0;
     double *second = (double *)malloc(n * sizeof(double));
     if (second == NULL) return 0;
-    const int ok = ideal_order_sort(values, n, second, workspace);
+    const int ok = monotonic_order_sort(values, n, second, workspace);
     if (ok) memcpy(values, second, n * sizeof(double));
     free(second);
     return ok;
 }
 
-int ideal_order_is_sorted(const double *values, size_t n) {
+int monotonic_order_is_sorted(const double *values, size_t n) {
     if (values == NULL && n != 0u) return 0;
     for (size_t i = 1u; i < n; ++i) {
         if (order_key_u64(values[i]) < order_key_u64(values[i - 1u])) return 0;
@@ -417,7 +417,7 @@ int ideal_order_is_sorted(const double *values, size_t n) {
     return 1;
 }
 
-size_t ideal_order_unique_sorted(const double *sorted, size_t n, double *out) {
+size_t monotonic_order_unique_sorted(const double *sorted, size_t n, double *out) {
     if (n == 0u) return 0u;
     if (sorted == NULL || out == NULL) return 0u;
     size_t written = 1u;
@@ -465,7 +465,7 @@ static void radix_argsort_word(const uint64_t *keys, size_t n,
     *destination = dst;
 }
 
-int ideal_order_argsort_u64(const unsigned long long *raw_keys, size_t n,
+int monotonic_order_argsort_u64(const unsigned long long *raw_keys, size_t n,
                             size_t *indices, size_t *workspace) {
     const uint64_t *keys = (const uint64_t *)raw_keys;
     if ((n != 0u && (keys == NULL || indices == NULL || workspace == NULL)) ||
@@ -486,7 +486,7 @@ int ideal_order_argsort_u64(const unsigned long long *raw_keys, size_t n,
     return 1;
 }
 
-int ideal_order_lexargsort_u64(const unsigned long long *raw_words,
+int monotonic_order_lexargsort_u64(const unsigned long long *raw_words,
                                size_t n_words, size_t n,
                                size_t *indices, size_t *workspace) {
     const uint64_t *words = (const uint64_t *)raw_words;
@@ -517,7 +517,7 @@ static size_t byte_digit(const unsigned char *data, const size_t *offsets,
     return descending ? (size_t)(255u - value) : (size_t)(value + 1u);
 }
 
-int ideal_order_argsort_bytes(const unsigned char *data, size_t data_size,
+int monotonic_order_argsort_bytes(const unsigned char *data, size_t data_size,
                               const size_t *offsets, size_t n, int descending,
                               size_t *indices, size_t *workspace) {
     if ((n != 0u && (offsets == NULL || indices == NULL || workspace == NULL)) ||
@@ -583,7 +583,7 @@ int ideal_order_argsort_bytes(const unsigned char *data, size_t data_size,
     return 1;
 }
 
-int ideal_order_hilbert2d_u64(const unsigned long long *raw_x,
+int monotonic_order_hilbert2d_u64(const unsigned long long *raw_x,
                               const unsigned long long *raw_y,
                               size_t n, unsigned bits,
                               unsigned long long *raw_out) {

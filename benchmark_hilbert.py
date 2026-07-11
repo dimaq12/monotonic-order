@@ -7,7 +7,7 @@ import time
 
 import numpy as np
 
-from ideal_order import hilbert_argsort, hilbert_encode, morton_argsort, morton_encode
+from monotonic_order import hilbert_argsort, hilbert_encode, morton_argsort, morton_encode
 
 
 def median_seconds(function, repeats: int = 5) -> float:

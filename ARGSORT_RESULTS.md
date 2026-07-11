@@ -1,7 +1,7 @@
 # Monotonic-key argsort results
 
 Environment: AMD Ryzen 9 9950X3D, Python 3.12, NumPy 2.2.6, GCC, serial
-IdealOrder `0.2.0`. Median of seven warmed calls at `N=1,000,000`.
+MonotonicOrder `0.2.0`. Median of seven warmed calls at `N=1,000,000`.
 
 Command:
 
@@ -9,7 +9,7 @@ Command:
 make benchmark-argsort
 ```
 
-| Key dtype | IdealOrder | NumPy stable argsort | Speedup | Permutation exact |
+| Key dtype | MonotonicOrder | NumPy stable argsort | Speedup | Permutation exact |
 |---|---:|---:|---:|---:|
 | `uint64` | 13.435 ms | 56.414 ms | 4.20x | yes |
 | `int64` | 16.167 ms | 56.888 ms | 3.52x | yes |

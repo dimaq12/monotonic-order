@@ -7,7 +7,7 @@ import time
 
 import numpy as np
 
-from ideal_order import radix_argsort
+from monotonic_order import radix_argsort
 
 
 def median_seconds(function, repeats: int = 7) -> float:
@@ -28,7 +28,7 @@ def main() -> None:
         "float64": rng.standard_normal(size),
     }
     print(f"Stable argsort benchmark, N={size:,}")
-    print(f"{'dtype':>10} {'IdealOrder':>12} {'NumPy':>12} {'speedup':>10} {'exact':>7}")
+    print(f"{'dtype':>10} {'MonotonicOrder':>12} {'NumPy':>12} {'speedup':>10} {'exact':>7}")
     for name, values in arrays.items():
         radix_argsort(values)
         np.argsort(values, kind="stable")

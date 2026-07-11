@@ -1,73 +1,34 @@
-#ifndef IDEAL_ORDER_H
-#define IDEAL_ORDER_H
+#ifndef IDEAL_ORDER_COMPAT_H
+#define IDEAL_ORDER_COMPAT_H
 
-#include <stddef.h>
+/* Source-compatibility header for the pre-0.7 C API. */
+#include "monotonic_order.h"
 
-#if defined(_WIN32)
-#define IDEAL_ORDER_API __declspec(dllexport)
-#else
-#define IDEAL_ORDER_API
-#endif
+typedef MonotonicOrder IdealOrder;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define IDEAL_ORDER_API MONOTONIC_ORDER_API
+#define ideal_order_create monotonic_order_create
+#define ideal_order_destroy monotonic_order_destroy
+#define ideal_order_size monotonic_order_size
+#define ideal_order_bins monotonic_order_bins
+#define ideal_order_storage_bytes monotonic_order_storage_bytes
+#define ideal_order_min monotonic_order_min
+#define ideal_order_max monotonic_order_max
+#define ideal_order_q1 monotonic_order_q1
+#define ideal_order_median monotonic_order_median
+#define ideal_order_q3 monotonic_order_q3
+#define ideal_order_mad monotonic_order_mad
+#define ideal_order_rank monotonic_order_rank
+#define ideal_order_quantile monotonic_order_quantile
+#define ideal_order_rank_array monotonic_order_rank_array
+#define ideal_order_sort monotonic_order_sort
+#define ideal_order_sort_inplace monotonic_order_sort_inplace
+#define ideal_order_is_sorted monotonic_order_is_sorted
+#define ideal_order_unique_sorted monotonic_order_unique_sorted
+#define ideal_order_argsort_u64 monotonic_order_argsort_u64
+#define ideal_order_lexargsort_u64 monotonic_order_lexargsort_u64
+#define ideal_order_argsort_bytes monotonic_order_argsort_bytes
+#define ideal_order_hilbert2d_u64 monotonic_order_hilbert2d_u64
+#define ideal_order_key monotonic_order_key
 
-typedef struct IdealOrder IdealOrder;
-
-/* The training array is used only during construction and is not retained. */
-IDEAL_ORDER_API IdealOrder *ideal_order_create(const double *data, size_t n, size_t n_bins);
-IDEAL_ORDER_API void ideal_order_destroy(IdealOrder *order);
-
-IDEAL_ORDER_API size_t ideal_order_size(const IdealOrder *order);
-IDEAL_ORDER_API size_t ideal_order_bins(const IdealOrder *order);
-IDEAL_ORDER_API size_t ideal_order_storage_bytes(const IdealOrder *order);
-
-IDEAL_ORDER_API double ideal_order_min(const IdealOrder *order);
-IDEAL_ORDER_API double ideal_order_max(const IdealOrder *order);
-IDEAL_ORDER_API double ideal_order_q1(const IdealOrder *order);
-IDEAL_ORDER_API double ideal_order_median(const IdealOrder *order);
-IDEAL_ORDER_API double ideal_order_q3(const IdealOrder *order);
-IDEAL_ORDER_API double ideal_order_mad(const IdealOrder *order);
-
-/* Compressed-reference queries: approximate by construction. */
-IDEAL_ORDER_API double ideal_order_rank(const IdealOrder *order, double value);
-IDEAL_ORDER_API double ideal_order_quantile(const IdealOrder *order, double q);
-IDEAL_ORDER_API void ideal_order_rank_array(const IdealOrder *order, const double *values,
-                                             size_t n, double *out);
-
-/* Exact operations on the supplied array. NaNs are placed last. */
-IDEAL_ORDER_API int ideal_order_sort(const double *values, size_t n, double *out,
-                                     double *workspace);
-IDEAL_ORDER_API int ideal_order_sort_inplace(double *values, size_t n, double *workspace);
-IDEAL_ORDER_API int ideal_order_is_sorted(const double *values, size_t n);
-IDEAL_ORDER_API size_t ideal_order_unique_sorted(const double *sorted, size_t n, double *out);
-
-/* Stable permutation that orders arbitrary unsigned 64-bit monotonic keys. */
-IDEAL_ORDER_API int ideal_order_argsort_u64(const unsigned long long *keys, size_t n,
-                                             size_t *indices, size_t *workspace);
-
-/* Stable lexicographic permutation. Words are [n_words][n], MS word first. */
-IDEAL_ORDER_API int ideal_order_lexargsort_u64(const unsigned long long *words,
-                                                size_t n_words, size_t n,
-                                                size_t *indices, size_t *workspace);
-
-/* Stable lexicographic order for concatenated variable-length byte strings. */
-IDEAL_ORDER_API int ideal_order_argsort_bytes(const unsigned char *data, size_t data_size,
-                                               const size_t *offsets, size_t n,
-                                               int descending,
-                                               size_t *indices, size_t *workspace);
-
-/* Exact Hilbert distance for quantized 2D coordinates, up to 32 bits/axis. */
-IDEAL_ORDER_API int ideal_order_hilbert2d_u64(const unsigned long long *x,
-                                               const unsigned long long *y,
-                                               size_t n, unsigned bits,
-                                               unsigned long long *out);
-
-/* IEEE-754 total-order key used by the exact radix operator. */
-IDEAL_ORDER_API unsigned long long ideal_order_key(double value);
-
-#ifdef __cplusplus
-}
-#endif
 #endif

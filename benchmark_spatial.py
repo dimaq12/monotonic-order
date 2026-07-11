@@ -7,7 +7,7 @@ import time
 
 import numpy as np
 
-from ideal_order import morton_argsort, morton_encode, radix_argsort
+from monotonic_order import morton_argsort, morton_encode, radix_argsort
 
 
 def median_seconds(function, repeats: int = 5) -> float:
@@ -33,7 +33,7 @@ def main() -> None:
                            np.argsort(encoded.keys, kind="stable"))
     print(f"Morton 2D pipeline, N={size:,}, 32 bits/axis")
     print(f"Encode only:            {encoding_time*1e3:.3f} ms")
-    print(f"IdealOrder key argsort: {ideal_time*1e3:.3f} ms")
+    print(f"MonotonicOrder key argsort: {ideal_time*1e3:.3f} ms")
     print(f"NumPy key argsort:      {numpy_time*1e3:.3f} ms")
     print(f"Ideal total pipeline:   {total_time*1e3:.3f} ms")
     print(f"Key argsort speedup:    {numpy_time/ideal_time:.2f}x")

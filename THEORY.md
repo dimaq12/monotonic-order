@@ -1,6 +1,6 @@
-# IdealOrder: Mathematical Specification
+# MonotonicOrder: Mathematical Specification
 
-This document defines the exact operator implemented by `idealorder`, separates
+This document defines the exact operator implemented by `monotonic-order`, separates
 its exact and approximate parts, and records its algebraic, numerical and
 information-theoretic contracts.
 
@@ -64,7 +64,7 @@ and quantile knots
 q_j=Q_N(u_j).
 \]
 
-The fitted IdealOrder projection is
+The fitted MonotonicOrder projection is
 
 \[
 \boxed{
@@ -428,7 +428,7 @@ Q_{ca+d}(u)=cQ_a(u)+d,
 
 ## 8. Warmed-object semantics
 
-Fitting `IdealOrder(reference)` produces immutable statistics and quantile
+Fitting `MonotonicOrder(reference)` produces immutable statistics and quantile
 knots for **that reference sample**. After fitting:
 
 - `min`, `max`, quartiles, median, IQR and MAD are immediate stored reads;
@@ -445,7 +445,7 @@ Thus “warming” has two meanings that must not be conflated:
    already been initialized before a benchmark sample.
 
 NumPy can also provide `O(1)` reads if an application manually caches every
-desired statistic. IdealOrder packages a specific immutable cache together
+desired statistic. MonotonicOrder packages a specific immutable cache together
 with a compressed CDF and the exact order kernel.
 
 ## 9. Information-theoretic boundary
@@ -464,7 +464,7 @@ bits in the worst case. Exact ranks contain enough information to distinguish
 many such sets. When `U` is large relative to `N`, this lower bound grows on
 the order of the sample information itself, not `O(K)`.
 
-IdealOrder chooses the explicit trade-off:
+MonotonicOrder chooses the explicit trade-off:
 
 \[
 \boxed{
@@ -498,16 +498,16 @@ read the new data again.
 The mathematical objects map to Python as follows:
 
 ```python
-from ideal_order import IdealOrder, sort
+from monotonic_order import MonotonicOrder, sort
 
-model = IdealOrder(reference, n_bins=K)  # P_K(mu_N)
+model = MonotonicOrder(reference, n_bins=K)  # P_K(mu_N)
 model.quantile(u)                         # Q_hat_K(u)
 model.rank(y)                             # F_hat_K(y)
 model.median                              # exact cached Q_N(1/2)
 sort(values)                              # S_N(values)
 ```
 
-The C API in `ideal_order.h` exposes the same core without requiring Python.
+The C API in `monotonic_order.h` exposes the same core without requiring Python.
 
 ## 12. Monotonic-key permutation extension
 

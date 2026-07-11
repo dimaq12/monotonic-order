@@ -4,7 +4,7 @@ Environment: AMD Ryzen 9 9950X3D, Python 3.12.3, NumPy 2.2.6, GCC 13.3,
 three nearby OpenMP cores. Median of nine calls, including Python call and
 output/workspace allocation. Command: `make benchmark`.
 
-| Distribution | N | idealOrder | NumPy | Speedup | Exact |
+| Distribution | N | MonotonicOrder | NumPy | Speedup | Exact |
 |---|---:|---:|---:|---:|---:|
 | normal | 100,000 | 0.783 ms | 0.274 ms | 0.35x | yes |
 | normal | 1,000,000 | 2.243 ms | 3.876 ms | 1.73x | yes |
@@ -27,7 +27,7 @@ For a one-million-element training array with `K=256`:
 
 Out-of-place sort working memory, excluding input:
 
-| N | idealOrder output + workspace | NumPy output |
+| N | MonotonicOrder output + workspace | NumPy output |
 |---:|---:|---:|
 | 100,000 | 1.53 MiB | 0.76 MiB |
 | 1,000,000 | 15.26 MiB | 7.63 MiB |

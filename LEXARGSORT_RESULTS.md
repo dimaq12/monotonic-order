@@ -1,7 +1,7 @@
 # Multiword lexargsort results
 
 Environment: AMD Ryzen 9 9950X3D, Python 3.12, NumPy 2.2.6, GCC, serial
-IdealOrder `0.3.0`. Median of seven warmed calls at `N=1,000,000`.
+MonotonicOrder `0.3.0`. Median of seven warmed calls at `N=1,000,000`.
 
 Command:
 
@@ -14,7 +14,7 @@ the same most-significant-to-least-significant semantic order.
 
 | Method | Time | Exact permutation |
 |---|---:|---:|
-| IdealOrder `radix_lexargsort` | 46.696 ms | yes |
+| MonotonicOrder `radix_lexargsort` | 46.696 ms | yes |
 | NumPy `lexsort` | 247.781 ms | reference |
 
 Measured speedup: **5.31x**.

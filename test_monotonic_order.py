@@ -2,15 +2,15 @@ import unittest
 
 import numpy as np
 
-from ideal_order import IdealOrder
+from monotonic_order import MonotonicOrder
 
 
-class IdealOrderTests(unittest.TestCase):
+class MonotonicOrderTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.rng = np.random.default_rng(20260711)
         cls.training = cls.rng.standard_normal(20_001)
-        cls.order = IdealOrder(cls.training, n_bins=256)
+        cls.order = MonotonicOrder(cls.training, n_bins=256)
 
     @classmethod
     def tearDownClass(cls):
@@ -61,32 +61,32 @@ class IdealOrderTests(unittest.TestCase):
         ]
         for x in arrays:
             with self.subTest(size=x.size):
-                self.assertSameFloatOrder(IdealOrder.sort(x), np.sort(x, kind="stable"))
+                self.assertSameFloatOrder(MonotonicOrder.sort(x), np.sort(x, kind="stable"))
 
     def test_ieee_edges_and_nan_policy(self):
         x = np.array([np.nan, 0.0, -0.0, np.inf, -np.inf, -1.0, 1.0, np.nan])
-        got = IdealOrder.sort(x)
+        got = MonotonicOrder.sort(x)
         expected = np.sort(x, kind="stable")
         self.assertSameFloatOrder(got, expected)
-        self.assertTrue(IdealOrder.is_sorted(got))
-        self.assertFalse(IdealOrder.is_sorted(x))
+        self.assertTrue(MonotonicOrder.is_sorted(got))
+        self.assertFalse(MonotonicOrder.is_sorted(x))
 
     def test_unique_and_k(self):
         x = np.array([3.0, 1.0, 3.0, 2.0, -0.0, 0.0])
-        self.assertTrue(np.array_equal(IdealOrder.unique(x), np.array([-0.0, 0.0, 1.0, 2.0, 3.0])))
-        self.assertTrue(np.array_equal(IdealOrder.bottom_k(x, 2), np.sort(x, kind="stable")[:2]))
-        self.assertTrue(np.array_equal(IdealOrder.top_k(x, 2), np.array([3.0, 3.0])))
+        self.assertTrue(np.array_equal(MonotonicOrder.unique(x), np.array([-0.0, 0.0, 1.0, 2.0, 3.0])))
+        self.assertTrue(np.array_equal(MonotonicOrder.bottom_k(x, 2), np.sort(x, kind="stable")[:2]))
+        self.assertTrue(np.array_equal(MonotonicOrder.top_k(x, 2), np.array([3.0, 3.0])))
 
     def test_ranges_and_reverse(self):
         x = np.array([5.0, 1.0, 3.0, 2.0, 4.0])
-        self.assertEqual(IdealOrder.count_between(x, 2.0, 4.0), 3)
-        self.assertTrue(np.array_equal(IdealOrder.sort_reverse(x), np.array([5., 4., 3., 2., 1.])))
+        self.assertEqual(MonotonicOrder.count_between(x, 2.0, 4.0), 3)
+        self.assertTrue(np.array_equal(MonotonicOrder.sort_reverse(x), np.array([5., 4., 3., 2., 1.])))
 
     def test_invalid_training(self):
         with self.assertRaises(ValueError):
-            IdealOrder([])
+            MonotonicOrder([])
         with self.assertRaises(ValueError):
-            IdealOrder([1.0, np.nan])
+            MonotonicOrder([1.0, np.nan])
 
 
 if __name__ == "__main__":

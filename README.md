@@ -1,15 +1,16 @@
-# IdealOrder
+# MonotonicOrder
 
-[![tests](https://github.com/dimaq12/order/actions/workflows/test.yml/badge.svg)](https://github.com/dimaq12/order/actions/workflows/test.yml)
-[![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)](https://github.com/dimaq12/order/blob/main/pyproject.toml)
+[![tests](https://github.com/dimaq12/monotonic-order/actions/workflows/test.yml/badge.svg)](https://github.com/dimaq12/monotonic-order/actions/workflows/test.yml)
+[![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)](https://github.com/dimaq12/monotonic-order/blob/main/pyproject.toml)
 [![CPython stable ABI](https://img.shields.io/badge/CPython-abi3-4B8BBE)](https://docs.python.org/3/c-api/stable.html)
-[![release](https://img.shields.io/github/v/release/dimaq12/order?display_name=tag)](https://github.com/dimaq12/order/releases)
+[![release](https://img.shields.io/github/v/release/dimaq12/monotonic-order?display_name=tag)](https://github.com/dimaq12/monotonic-order/releases)
+[![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 **Stable radix ordering for monotonic keys, plus a compact `O(K)` reference
-distribution model.** IdealOrder returns reusable permutations instead of
+distribution model.** MonotonicOrder returns reusable permutations instead of
 moving arbitrary payload objects inside the native kernel.
 
-## Why IdealOrder
+## Why MonotonicOrder
 
 - exact stable argsort for `uint64`, `int64`, IEEE-754 `float64`, datetime,
   timedelta and UUID keys;
@@ -77,7 +78,7 @@ all array operations (`sort`, `unique`, `top_k`, `bottom_k`, `count_between`,
 From the latest tagged release:
 
 ```bash
-python -m pip install "idealorder @ git+https://github.com/dimaq12/order.git@v0.6.0"
+python -m pip install "monotonic-order @ git+https://github.com/dimaq12/monotonic-order.git@v0.7.0"
 ```
 
 For local development:
@@ -87,26 +88,43 @@ python -m pip install -e ".[test]"
 python -m pytest
 ```
 
-The distribution name is `idealorder`; the import package is `ideal_order`.
+The distribution name is `monotonic-order`; the import package is `monotonic_order`.
 Installation compiles the bundled C11 core as a platform extension. Portable
 builds deliberately avoid `-march=native`. To opt into OpenMP when the compiler
 and runtime support it:
 
 ```bash
-IDEAL_ORDER_OPENMP=1 python -m pip install .
+MONOTONIC_ORDER_OPENMP=1 python -m pip install .
 ```
 
 The native loader uses CPython's stable ABI (`abi3`) targeting Python 3.9+, so
 one wheel can serve multiple CPython versions on the same platform.
 
+### Migrating from IdealOrder 0.6
+
+Use `monotonic_order` and `MonotonicOrder` in new code. Version 0.7 keeps
+`ideal_order` and `IdealOrder` as compatibility aliases, but the canonical
+distribution and native C symbols have changed:
+
+```python
+# before
+from ideal_order import IdealOrder
+
+# 0.7+
+from monotonic_order import MonotonicOrder
+```
+
+For C callers, include `monotonic_order.h`. The compatibility
+`ideal_order.h` maps old source names to the new API when recompiling.
+
 ## Use
 
 ```python
 import numpy as np
-from ideal_order import IdealOrder, sort
+from monotonic_order import MonotonicOrder, sort
 
 training = np.random.default_rng(1).normal(size=1_000_000)
-with IdealOrder(training, n_bins=256) as model:
+with MonotonicOrder(training, n_bins=256) as model:
     print(model.storage_bytes, model.median, model.rank(0.0))
 
 ordered = sort(np.random.default_rng(2).normal(size=1_000_000))
@@ -116,7 +134,7 @@ Order arbitrary payloads by one monotonic numeric key per item:
 
 ```python
 import numpy as np
-from ideal_order import order_by, radix_argsort
+from monotonic_order import order_by, radix_argsort
 
 records = [{"name": "c", "score": 2},
            {"name": "a", "score": 1},
@@ -147,7 +165,7 @@ Version 0.6 adds independently verified Hilbert 2D encoding with the same
 explicit quantization and clipping contract:
 
 ```python
-from ideal_order import hilbert_argsort, hilbert_encode
+from monotonic_order import hilbert_argsort, hilbert_encode
 
 encoded = hilbert_encode(points, bounds=((0, 1), (0, 1)), bits=32)
 permutation = hilbert_argsort(points, bounds=((0, 1), (0, 1)), bits=32)
@@ -163,7 +181,7 @@ Measured permutation-only results are recorded in
 ## Native development build
 
 ```bash
-cd idealOrder
+cd MonotonicOrder
 make
 make test
 make asan

@@ -8,7 +8,7 @@ import time
 
 import numpy as np
 
-from ideal_order import radix_bytes_argsort, radix_string_argsort
+from monotonic_order import radix_bytes_argsort, radix_string_argsort
 
 
 def median_seconds(function, repeats: int = 5) -> float:
@@ -39,8 +39,8 @@ def main() -> None:
     exact = list(radix_bytes_argsort(blob, offsets)) == reference()
 
     print(f"Variable byte-string argsort, N={size:,}, length=4..24")
-    print(f"IdealOrder end-to-end: {end_to_end*1e3:.3f} ms")
-    print(f"IdealOrder pre-encoded: {preencoded*1e3:.3f} ms")
+    print(f"MonotonicOrder end-to-end: {end_to_end*1e3:.3f} ms")
+    print(f"MonotonicOrder pre-encoded: {preencoded*1e3:.3f} ms")
     print(f"Python sorted indices:  {python*1e3:.3f} ms")
     print(f"End-to-end speedup:     {python/end_to_end:.2f}x")
     print(f"Pre-encoded speedup:    {python/preencoded:.2f}x")

@@ -1,12 +1,13 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "idealorder"
-version = "0.6.0"
+name = "monotonic-order"
+version = "0.7.0"
 description = "Stable native radix ordering for monotonic keys and compact quantile models"
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.9"
 authors = [
   { name = "Dmitry Sierikov" },
@@ -28,10 +29,10 @@ test = ["pytest>=7"]
 build = ["build>=1", "wheel"]
 
 [project.urls]
-Repository = "https://github.com/dimaq12/order"
-Issues = "https://github.com/dimaq12/order/issues"
-Changelog = "https://github.com/dimaq12/order/blob/main/CHANGELOG.md"
-Theory = "https://github.com/dimaq12/order/blob/main/THEORY.md"
+Repository = "https://github.com/dimaq12/monotonic-order"
+Issues = "https://github.com/dimaq12/monotonic-order/issues"
+Changelog = "https://github.com/dimaq12/monotonic-order/blob/main/CHANGELOG.md"
+Theory = "https://github.com/dimaq12/monotonic-order/blob/main/THEORY.md"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -41,11 +42,11 @@ include-package-data = false
 where = ["src"]
 
 [tool.setuptools.package-data]
-ideal_order = ["py.typed"]
+monotonic_order = ["py.typed"]
 
 [tool.setuptools.exclude-package-data]
-ideal_order = ["*.c", "_native.cpython-*.so"]
+monotonic_order = ["*.c", "_native.cpython-*.so"]
 
 [tool.pytest.ini_options]
-testpaths = ["test_ideal_order.py", "tests"]
+testpaths = ["test_monotonic_order.py", "tests"]
 addopts = "-ra"

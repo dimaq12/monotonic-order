@@ -7,17 +7,17 @@ import statistics
 import sys
 import time
 
-if os.environ.get("IDEAL_ORDER_WARM_BENCH_ENV") != "1":
+if os.environ.get("MONOTONIC_ORDER_WARM_BENCH_ENV") != "1":
     env = os.environ.copy()
     env.setdefault("OMP_NUM_THREADS", "3")
     env.setdefault("OMP_PROC_BIND", "close")
     env.setdefault("OMP_PLACES", "cores")
-    env["IDEAL_ORDER_WARM_BENCH_ENV"] = "1"
+    env["MONOTONIC_ORDER_WARM_BENCH_ENV"] = "1"
     os.execve(sys.executable, [sys.executable, __file__], env)
 
 import numpy as np
 
-from ideal_order import IdealOrder
+from monotonic_order import MonotonicOrder
 
 
 N = 1_000_000
@@ -27,9 +27,9 @@ incoming = rng.standard_normal(N)
 
 # Everything below is post-warm: neither construction nor first-call library
 # initialisation is included in any measured sample.
-model = IdealOrder(reference, n_bins=256)
+model = MonotonicOrder(reference, n_bins=256)
 sorted_reference = np.sort(reference)
-IdealOrder.sort(incoming)
+MonotonicOrder.sort(incoming)
 np.sort(incoming)
 _ = model.min, model.max, model.median, model.q1, model.q3, model.mad
 _ = model.rank(0.123), model.quantile(0.731)
@@ -67,10 +67,10 @@ stats = [
      lambda: np.median(np.abs(reference - np.median(reference))), 31),
 ]
 
-print("idealOrder post-warm benchmark")
+print("MonotonicOrder post-warm benchmark")
 print(f"N={N:,}; model and NumPy sorted reference were built before timing")
 print("\nStored exact statistics (each NumPy call recomputes from ndarray)")
-print(f"{'operation':>10} {'idealOrder':>13} {'NumPy':>13} {'speedup':>12}")
+print(f"{'operation':>10} {'MonotonicOrder':>13} {'NumPy':>13} {'speedup':>12}")
 print("-" * 52)
 stat_rows = []
 for name, ideal_fn, numpy_fn, repeats in stats:
@@ -113,10 +113,10 @@ print(f"sort 1M: ideal={fmt(ideal_sort_ns)}, NumPy={fmt(numpy_sort_ns)}, "
       f"speedup={numpy_sort_ns/ideal_sort_ns:.2f}x, exact=True")
 
 print("\nPersistent memory")
-print(f"idealOrder model: {model.storage_bytes:,} bytes")
+print(f"MonotonicOrder model: {model.storage_bytes:,} bytes")
 print(f"NumPy exact sorted-reference cache: {sorted_reference.nbytes:,} bytes")
 print(f"reference-cache compression: {sorted_reference.nbytes/model.storage_bytes:.0f}x")
 print("NumPy can make stored scalar statistics O(1) by manually caching them; that is the same precompute idea.")
-print("idealOrder arbitrary rank/quantile are approximate; NumPy sorted-cache queries are exact.")
+print("MonotonicOrder arbitrary rank/quantile are approximate; NumPy sorted-cache queries are exact.")
 
 model.close()

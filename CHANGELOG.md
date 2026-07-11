@@ -3,6 +3,15 @@
 All notable changes are documented here. The project follows semantic versioning
 while its public API is in alpha development.
 
+## 0.7.0 — 2026-07-12
+
+- rename the project and distribution from IdealOrder to MonotonicOrder;
+- make `monotonic_order` and `MonotonicOrder` the canonical Python API;
+- rename native files and exported symbols to `monotonic_order_*`;
+- retain Python and C source-compatibility shims for the pre-0.7 names;
+- rename the GitHub repository to `dimaq12/monotonic-order`;
+- license the project under the MIT License.
+
 ## 0.6.0 — 2026-07-11
 
 - add native Hilbert 2D encoding for one to 32 bits per axis;

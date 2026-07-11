@@ -1,4 +1,5 @@
 include README.md
+include LICENSE
 include CHANGELOG.md
 include CONTRIBUTING.md
 include SECURITY.md
@@ -6,9 +7,11 @@ include THEORY.md
 include EPIC_MONOTONIC_KEYS.md
 include ARGSORT_RESULTS.md
 include LEXARGSORT_RESULTS.md
-include ideal_order.c
+include monotonic_order.c
+include monotonic_order.h
 include ideal_order.h
-recursive-include src/ideal_order *.c *.py py.typed
+recursive-include src/monotonic_order *.c *.py py.typed
+recursive-include src/ideal_order *.py
 recursive-include tests *.py
 include benchmark_argsort.py
 include benchmark_lexargsort.py
