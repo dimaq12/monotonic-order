@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ctypes as ct
+from dataclasses import dataclass
 from enum import Enum
 import operator
 import unicodedata
@@ -271,6 +272,93 @@ def enum_keys(values: object, order: dict[Enum, int] | None = None) -> np.ndarra
             raise OverflowError("Enum rank does not fit int64")
         encoded[index] = int(rank)
     return encoded
+
+
+@dataclass(frozen=True)
+class MortonEncoding:
+    """Quantized spatial curve keys and an explicit loss report."""
+
+    keys: np.ndarray
+    quantized: np.ndarray
+    bounds: np.ndarray
+    bits: int
+    dimensions: int
+    clipped_coordinates: int
+    curve: str = "morton"
+    exact: bool = False
+
+
+def _spread_2d(values: np.ndarray) -> np.ndarray:
+    x = np.ascontiguousarray(values, dtype=np.uint64)
+    x = (x | (x << np.uint64(16))) & np.uint64(0x0000FFFF0000FFFF)
+    x = (x | (x << np.uint64(8))) & np.uint64(0x00FF00FF00FF00FF)
+    x = (x | (x << np.uint64(4))) & np.uint64(0x0F0F0F0F0F0F0F0F)
+    x = (x | (x << np.uint64(2))) & np.uint64(0x3333333333333333)
+    x = (x | (x << np.uint64(1))) & np.uint64(0x5555555555555555)
+    return x
+
+
+def _spread_3d(values: np.ndarray) -> np.ndarray:
+    x = np.ascontiguousarray(values, dtype=np.uint64) & np.uint64(0x1FFFFF)
+    x = (x | (x << np.uint64(32))) & np.uint64(0x1F00000000FFFF)
+    x = (x | (x << np.uint64(16))) & np.uint64(0x1F0000FF0000FF)
+    x = (x | (x << np.uint64(8))) & np.uint64(0x100F00F00F00F00F)
+    x = (x | (x << np.uint64(4))) & np.uint64(0x10C30C30C30C30C3)
+    x = (x | (x << np.uint64(2))) & np.uint64(0x1249249249249249)
+    return x
+
+
+def morton_encode(points: object, *, bounds: object, bits: int | None = None,
+                  clip: bool = False) -> MortonEncoding:
+    """Quantize 2D/3D points and encode their exact Morton cell order."""
+    coordinates = np.asarray(points, dtype=np.float64)
+    if coordinates.ndim != 2 or coordinates.shape[1] not in (2, 3):
+        raise ValueError("points must have shape (N,2) or (N,3)")
+    dimensions = coordinates.shape[1]
+    limits = np.asarray(bounds, dtype=np.float64)
+    if limits.shape != (dimensions, 2):
+        raise ValueError("bounds must have shape (dimensions,2)")
+    if not np.all(np.isfinite(coordinates)) or not np.all(np.isfinite(limits)):
+        raise ValueError("points and bounds must be finite")
+    if np.any(limits[:, 1] <= limits[:, 0]):
+        raise ValueError("every upper bound must exceed its lower bound")
+    maximum_bits = 32 if dimensions == 2 else 21
+    selected_bits = maximum_bits if bits is None else operator.index(bits)
+    if selected_bits < 1 or selected_bits > maximum_bits:
+        raise ValueError(f"bits must lie in [1,{maximum_bits}] for {dimensions}D Morton")
+
+    below = coordinates < limits[:, 0]
+    above = coordinates > limits[:, 1]
+    outside = below | above
+    clipped_coordinates = int(np.count_nonzero(outside))
+    if clipped_coordinates and not clip:
+        raise ValueError("points lie outside bounds; pass clip=True to clamp explicitly")
+    bounded = np.clip(coordinates, limits[:, 0], limits[:, 1]) if clip else coordinates
+    levels = (1 << selected_bits)-1
+    normalized = (bounded-limits[:, 0])/(limits[:, 1]-limits[:, 0])
+    quantized = np.floor(normalized*levels+0.5).astype(np.uint64)
+
+    if dimensions == 2:
+        keys = _spread_2d(quantized[:, 0]) | (_spread_2d(quantized[:, 1]) << np.uint64(1))
+    else:
+        keys = (_spread_3d(quantized[:, 0]) |
+                (_spread_3d(quantized[:, 1]) << np.uint64(1)) |
+                (_spread_3d(quantized[:, 2]) << np.uint64(2)))
+    return MortonEncoding(
+        keys=np.ascontiguousarray(keys),
+        quantized=np.ascontiguousarray(quantized),
+        bounds=limits.copy(),
+        bits=selected_bits,
+        dimensions=dimensions,
+        clipped_coordinates=clipped_coordinates,
+    )
+
+
+def morton_argsort(points: object, *, bounds: object, bits: int | None = None,
+                   clip: bool = False, descending: bool = False) -> np.ndarray:
+    """Stable argsort by a quantized Morton spatial-curve key."""
+    encoded = morton_encode(points, bounds=bounds, bits=bits, clip=clip)
+    return radix_argsort(encoded.keys, descending=descending)
 
 
 def _field_options(option: object, count: int, name: str) -> list[object]:

@@ -18,7 +18,7 @@ class PackageTests(unittest.TestCase):
         self.assertTrue(np.array_equal(actual[mask], expected[mask]))
 
     def test_public_api_and_version(self):
-        self.assertEqual(ideal_order.__version__, "0.4.0")
+        self.assertEqual(ideal_order.__version__, "0.5.0")
         self.assertIs(ideal_order.sort, IdealOrder.sort)
 
     def test_compact_model_contract(self):
@@ -233,6 +233,58 @@ class PackageTests(unittest.TestCase):
                          [Priority.LOW, Priority.NORMAL, Priority.HIGH])
         with self.assertRaises(TypeError):
             ideal_order.enum_keys(values)
+
+    @staticmethod
+    def reference_morton(point, bits):
+        key = 0
+        for bit in range(bits):
+            for axis, coordinate in enumerate(point):
+                key |= ((int(coordinate) >> bit) & 1) << (bit*len(point)+axis)
+        return key
+
+    def test_morton_2d_exhaustive_small_grid(self):
+        bits = 3
+        grid = np.array([(x, y) for x in range(1 << bits) for y in range(1 << bits)],
+                        dtype=np.float64)
+        encoded = ideal_order.morton_encode(
+            grid, bounds=((0, (1 << bits)-1), (0, (1 << bits)-1)), bits=bits,
+        )
+        expected = np.array([self.reference_morton(point, bits) for point in grid],
+                            dtype=np.uint64)
+        self.assertTrue(np.array_equal(encoded.keys, expected))
+        self.assertEqual(np.unique(encoded.keys).size, grid.shape[0])
+        self.assertFalse(encoded.exact)
+
+    def test_morton_3d_exhaustive_small_grid(self):
+        bits = 2
+        grid = np.array([(x, y, z) for x in range(1 << bits)
+                         for y in range(1 << bits) for z in range(1 << bits)],
+                        dtype=np.float64)
+        encoded = ideal_order.morton_encode(
+            grid, bounds=((0, 3), (0, 3), (0, 3)), bits=bits,
+        )
+        expected = np.array([self.reference_morton(point, bits) for point in grid],
+                            dtype=np.uint64)
+        self.assertTrue(np.array_equal(encoded.keys, expected))
+
+    def test_morton_quantization_clipping_and_stability(self):
+        points = np.array([[0.1, 0.1], [0.11, 0.11], [0.9, 0.9], [1.2, -0.1]])
+        with self.assertRaises(ValueError):
+            ideal_order.morton_encode(points, bounds=((0, 1), (0, 1)), bits=2)
+        encoded = ideal_order.morton_encode(points, bounds=((0, 1), (0, 1)),
+                                             bits=2, clip=True)
+        self.assertEqual(encoded.clipped_coordinates, 2)
+        permutation = ideal_order.radix_argsort(encoded.keys)
+        tied = [index for index in permutation if index in (0, 1)]
+        self.assertEqual(tied, [0, 1])
+
+    def test_morton_argsort_matches_encoded_key_order(self):
+        points = self.rng.random((1000, 3))
+        bounds = ((0, 1), (0, 1), (0, 1))
+        encoded = ideal_order.morton_encode(points, bounds=bounds, bits=21)
+        actual = ideal_order.morton_argsort(points, bounds=bounds, bits=21)
+        expected = np.argsort(encoded.keys, kind="stable")
+        self.assertTrue(np.array_equal(actual, expected))
 
 
 if __name__ == "__main__":

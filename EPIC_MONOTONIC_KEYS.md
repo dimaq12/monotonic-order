@@ -3,7 +3,8 @@
 **Target:** `idealorder` 0.2–0.5
 
 **Status:** numeric Phase 1 shipped in `0.2.0`; multiword/UUID/datetime core
-shipped in `0.3.0`; string/Enum phase shipped in `0.4.0`; spatial phase planned
+shipped in `0.3.0`; string/Enum phase shipped in `0.4.0`; Morton shipped in
+`0.5.0`; Hilbert remains planned
 
 **Core rule:** arbitrary payloads are never compared in the radix kernel; the
 caller supplies or derives an order-preserving key, and IdealOrder returns a
@@ -690,7 +691,7 @@ recalibrated with recorded hardware evidence.
 - [x] fixed-width bytes
 - [x] variable bytes
 - [x] Unicode policy layer
-- [ ] Morton 2D/3D
+- [x] Morton 2D/3D
 - [ ] Hilbert 2D independent verification
 
 ### Delivery

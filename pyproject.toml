@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "idealorder"
-version = "0.4.0"
+version = "0.5.0"
 description = "Compact distribution model and exact stable float64 order operations"
 readme = "README.md"
 requires-python = ">=3.9"

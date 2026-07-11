@@ -112,6 +112,11 @@ Version 0.4 adds exact variable-length bytes and Unicode ordering, explicit
 normalization/casefold policy, and integer-ranked Enum helpers. For data already
 stored as a concatenated byte blob plus offsets, use `radix_bytes_argsort` to
 avoid Python key-materialization overhead. See [STRING_RESULTS.md](STRING_RESULTS.md).
+
+Version 0.5 adds explicit-bounds Morton 2D/3D encoding. The returned
+`MortonEncoding` includes quantized cells, clipping count and `exact=False` so
+curve ordering cannot be confused with lossless coordinate ordering. See
+[SPATIAL_RESULTS.md](SPATIAL_RESULTS.md).
 Measured permutation-only results are recorded in
 [ARGSORT_RESULTS.md](ARGSORT_RESULTS.md). Multi-field results are in
 [LEXARGSORT_RESULTS.md](LEXARGSORT_RESULTS.md).

@@ -542,8 +542,21 @@ Arbitrary Python payloads are supported by materializing one supported key per
 object; no Python comparator runs inside the native radix passes.
 
 Multiple fields can be composed by stable multiword radix passes. Enum ranks
-are explicit integers. Spatial codecs remain specified but unimplemented in
-`EPIC_MONOTONIC_KEYS.md`.
+are explicit integers.
+
+For a point `x` inside explicit axis bounds, Morton encoding first quantizes
+each coordinate to
+
+\[
+q_j=\left\lfloor
+\frac{x_j-a_j}{b_j-a_j}(2^r-1)+\frac12
+\right\rfloor
+\]
+
+and interleaves their bits. Ordering of these finite cell keys is exact, while
+the map from continuous coordinates is explicitly lossy. Morton is a spatial
+curve order, not lexicographic coordinate order and not a metric-isometry.
+Hilbert encoding remains planned in `EPIC_MONOTONIC_KEYS.md`.
 
 ## 13. Benchmark interpretation
 
