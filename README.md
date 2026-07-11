@@ -6,6 +6,10 @@ Compact `O(K)` reference-distribution model plus an exact `float64` order
 operator. The training array is sorted only in temporary construction memory;
 it is never retained by the finished object.
 
+The complete mathematical specification, proofs of the radix ordering
+contract, approximation boundary and warmed-object semantics are in
+[THEORY.md](THEORY.md).
+
 ## Mathematical contract
 
 The compressed reference operator is
@@ -15,8 +19,9 @@ P_K(mu_N) = (q_0, ..., q_K; min, q1, median, q3, max, MAD),
 ```
 
 where `q_j = F_N^-1(j/K)`. It provides monotone approximate arbitrary ranks
-and quantiles with rank interval width `1/K`. Values at stored quantile knots
-and the stored scalar statistics are exact.
+and quantiles. For strictly increasing knots the probability-cell resolution
+is `1/K`; repeated values create intrinsically wider rank intervals. Values at
+stored quantile knots and the stored scalar statistics are exact.
 
 Exact sorting is a separate universal operator. A finite non-NaN IEEE-754
 value is mapped to an unsigned key `tau(x)` such that
