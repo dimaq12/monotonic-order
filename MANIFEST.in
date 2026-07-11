@@ -9,3 +9,5 @@ recursive-include src/ideal_order *.c *.py py.typed
 recursive-include tests *.py
 include benchmark_argsort.py
 include benchmark_lexargsort.py
+include benchmark_strings.py
+include STRING_RESULTS.md

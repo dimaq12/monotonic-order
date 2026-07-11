@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import ctypes as ct
+from enum import Enum
 import operator
+import unicodedata
 import uuid as uuid_module
 from typing import Iterable, Union
 
@@ -15,6 +17,7 @@ from . import _native
 _LIB = ct.CDLL(_native.__file__)
 _F64_1D = ndpointer(dtype=np.float64, ndim=1, flags=("C_CONTIGUOUS", "ALIGNED"))
 _U64_1D = ndpointer(dtype=np.uint64, ndim=1, flags=("C_CONTIGUOUS", "ALIGNED"))
+_U8_1D = ndpointer(dtype=np.uint8, ndim=1, flags=("C_CONTIGUOUS", "ALIGNED"))
 _UINTP_1D = ndpointer(dtype=np.uintp, ndim=1, flags=("C_CONTIGUOUS", "ALIGNED"))
 
 _LIB.ideal_order_create.argtypes = [_F64_1D, ct.c_size_t, ct.c_size_t]
@@ -49,6 +52,10 @@ _LIB.ideal_order_lexargsort_u64.argtypes = [
     _U64_1D, ct.c_size_t, ct.c_size_t, _UINTP_1D, _UINTP_1D,
 ]
 _LIB.ideal_order_lexargsort_u64.restype = ct.c_int
+_LIB.ideal_order_argsort_bytes.argtypes = [
+    _U8_1D, ct.c_size_t, _UINTP_1D, ct.c_size_t, ct.c_int, _UINTP_1D, _UINTP_1D,
+]
+_LIB.ideal_order_argsort_bytes.restype = ct.c_int
 
 
 ArrayInput = Union[np.ndarray, Iterable[float]]
@@ -161,8 +168,109 @@ def _native_lexargsort(words: list[np.ndarray]) -> np.ndarray:
 
 def radix_argsort(keys: object, *, descending: bool = False,
                   nulls: str = "last") -> np.ndarray:
-    """Return a stable permutation for supported monotonic numeric keys."""
+    """Return a stable permutation for a supported monotonic key field."""
+    values = np.asarray(keys)
+    if values.ndim == 1 and values.dtype.kind in "SU":
+        return radix_string_argsort(values, descending=descending, nulls=nulls)
+    if values.ndim == 1 and values.dtype.kind == "O":
+        present = next((value for value in values if value is not None), None)
+        if isinstance(present, (str, bytes, np.str_, np.bytes_)):
+            return radix_string_argsort(values, descending=descending, nulls=nulls)
     return _native_lexargsort(_field_words(keys, descending=bool(descending), nulls=nulls))
+
+
+def radix_string_argsort(values: object, *, encoding: str = "utf-8",
+                         normalization: str | None = None, casefold: bool = False,
+                         descending: bool = False, nulls: str = "last") -> np.ndarray:
+    """Stable lexicographic argsort for variable-length bytes or Unicode."""
+    _validate_nulls(nulls)
+    source = np.asarray(values, dtype=object)
+    if source.ndim != 1:
+        raise ValueError("string values must be one-dimensional")
+    missing_indices: list[int] = []
+    original_indices: list[int] = []
+    encoded_values: list[bytes] = []
+    kind: str | None = None
+    for index, value in enumerate(source):
+        if value is None:
+            missing_indices.append(index)
+            continue
+        if isinstance(value, (str, np.str_)):
+            if kind == "bytes":
+                raise TypeError("cannot mix Unicode strings and bytes")
+            kind = "str"
+            text = str(value)
+            if normalization is not None:
+                text = unicodedata.normalize(normalization, text)
+            if casefold:
+                text = text.casefold()
+            encoded = text.encode(encoding)
+        elif isinstance(value, (bytes, np.bytes_)):
+            if kind == "str":
+                raise TypeError("cannot mix Unicode strings and bytes")
+            if normalization is not None or casefold:
+                raise ValueError("normalization and casefold apply only to Unicode strings")
+            kind = "bytes"
+            encoded = bytes(value)
+        else:
+            raise TypeError("string keys must contain str, bytes, or None")
+        original_indices.append(index)
+        encoded_values.append(encoded)
+    if missing_indices and nulls == "error":
+        raise ValueError("string keys contain None while nulls='error'")
+
+    count = len(encoded_values)
+    local = np.empty(count, dtype=np.uintp)
+    if count:
+        offsets = np.empty(count + 1, dtype=np.uintp)
+        offsets[0] = 0
+        for index, value in enumerate(encoded_values):
+            offsets[index + 1] = offsets[index] + len(value)
+        blob = b"".join(encoded_values)
+        local = radix_bytes_argsort(blob, offsets, descending=descending)
+    ordered_present = np.asarray(original_indices, dtype=np.uintp)[local]
+    missing = np.asarray(missing_indices, dtype=np.uintp)
+    return (np.concatenate([missing, ordered_present]) if nulls == "first"
+            else np.concatenate([ordered_present, missing])).astype(np.uintp, copy=False)
+
+
+def radix_bytes_argsort(data: object, offsets: object, *,
+                        descending: bool = False) -> np.ndarray:
+    """Zero-copy-style argsort for a concatenated byte blob and offsets."""
+    if isinstance(data, (bytes, bytearray, memoryview)):
+        raw = np.frombuffer(data, dtype=np.uint8)
+    else:
+        raw = np.ascontiguousarray(data, dtype=np.uint8).ravel()
+    boundaries = np.ascontiguousarray(offsets, dtype=np.uintp)
+    if boundaries.ndim != 1 or boundaries.size == 0:
+        raise ValueError("offsets must be a one-dimensional array of length N+1")
+    count = boundaries.size - 1
+    indices = np.empty(count, dtype=np.uintp)
+    if count == 0:
+        if boundaries[0] != 0:
+            raise ValueError("empty offsets must contain only zero")
+        return indices
+    workspace = np.empty_like(indices)
+    if not _LIB.ideal_order_argsort_bytes(raw, raw.size, boundaries, count,
+                                           int(bool(descending)), indices, workspace):
+        raise ValueError("invalid byte blob/offsets or native allocation failure")
+    return indices
+
+
+def enum_keys(values: object, order: dict[Enum, int] | None = None) -> np.ndarray:
+    """Materialize explicit signed integer ranks for Enum members."""
+    source = list(values)  # type: ignore[arg-type]
+    encoded = np.empty(len(source), dtype=np.int64)
+    for index, value in enumerate(source):
+        if not isinstance(value, Enum):
+            raise TypeError("enum_keys expects Enum members")
+        rank = order[value] if order is not None else value.value
+        if not isinstance(rank, (int, np.integer)):
+            raise TypeError("Enum values need integer ranks or an explicit order mapping")
+        if rank < np.iinfo(np.int64).min or rank > np.iinfo(np.int64).max:
+            raise OverflowError("Enum rank does not fit int64")
+        encoded[index] = int(rank)
+    return encoded
 
 
 def _field_options(option: object, count: int, name: str) -> list[object]:

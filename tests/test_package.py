@@ -1,4 +1,5 @@
 import unittest
+from enum import Enum
 import uuid
 
 import numpy as np
@@ -17,7 +18,7 @@ class PackageTests(unittest.TestCase):
         self.assertTrue(np.array_equal(actual[mask], expected[mask]))
 
     def test_public_api_and_version(self):
-        self.assertEqual(ideal_order.__version__, "0.3.0")
+        self.assertEqual(ideal_order.__version__, "0.4.0")
         self.assertIs(ideal_order.sort, IdealOrder.sort)
 
     def test_compact_model_contract(self):
@@ -175,6 +176,63 @@ class PackageTests(unittest.TestCase):
         first = ideal_order.apply_order(values,
                                         ideal_order.radix_argsort(values, nulls="first"))
         self.assertEqual(first[:2], [None, None])
+
+    def test_variable_bytes_prefix_embedded_zero_and_stability(self):
+        values = [b"b", b"a", b"aa", b"a\x00", b"", b"b", b"a"]
+        actual = ideal_order.radix_string_argsort(values)
+        expected = np.asarray(sorted(range(len(values)), key=lambda i: values[i]))
+        self.assertTrue(np.array_equal(actual, expected))
+        descending = ideal_order.radix_string_argsort(values, descending=True)
+        expected_desc = np.asarray(sorted(range(len(values)),
+                                          key=lambda i: values[i], reverse=True))
+        self.assertTrue(np.array_equal(descending, expected_desc))
+        blob = b"baaab"
+        offsets = np.array([0, 1, 2, 4, 5], dtype=np.uintp)
+        self.assertTrue(np.array_equal(ideal_order.radix_bytes_argsort(blob, offsets),
+                                       [1, 2, 0, 3]))
+
+    def test_unicode_order_normalization_and_nulls(self):
+        values = ["ёж", "apple", "é", "e\u0301", "😀", "", None, "apple"]
+        actual = ideal_order.radix_string_argsort(values)
+        expected_present = sorted((i for i, value in enumerate(values) if value is not None),
+                                  key=lambda i: values[i])
+        self.assertTrue(np.array_equal(actual, [*expected_present, 6]))
+        normalized = ideal_order.radix_string_argsort(values, normalization="NFC")
+        ordered = ideal_order.apply_order(values, normalized)
+        self.assertLess(ordered.index("é"), ordered.index("e\u0301"))
+        first = ideal_order.radix_string_argsort(values, nulls="first")
+        self.assertEqual(first[0], 6)
+
+    def test_order_by_string_key(self):
+        records = [{"name": "zoe"}, {"name": "amy"}, {"name": "bob"}]
+        ordered = ideal_order.order_by(records, key=lambda row: row["name"])
+        self.assertEqual([row["name"] for row in ordered], ["amy", "bob", "zoe"])
+
+    def test_randomized_byte_string_properties(self):
+        values = []
+        for _ in range(1000):
+            length = int(self.rng.integers(0, 20))
+            values.append(bytes(self.rng.integers(0, 256, size=length, dtype=np.uint8)))
+        values.extend(values[:50])
+        for descending in (False, True):
+            actual = ideal_order.radix_string_argsort(values, descending=descending)
+            expected = np.asarray(sorted(range(len(values)), key=lambda i: values[i],
+                                         reverse=descending))
+            self.assertTrue(np.array_equal(actual, expected))
+
+    def test_enum_keys_require_explicit_integer_semantics(self):
+        class Priority(Enum):
+            LOW = "low"
+            NORMAL = "normal"
+            HIGH = "high"
+
+        values = [Priority.HIGH, Priority.LOW, Priority.NORMAL]
+        mapping = {Priority.LOW: 0, Priority.NORMAL: 1, Priority.HIGH: 2}
+        keys = ideal_order.enum_keys(values, mapping)
+        self.assertEqual(ideal_order.order_by(values, keys=keys),
+                         [Priority.LOW, Priority.NORMAL, Priority.HIGH])
+        with self.assertRaises(TypeError):
+            ideal_order.enum_keys(values)
 
 
 if __name__ == "__main__":

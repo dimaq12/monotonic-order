@@ -533,14 +533,16 @@ cost. Current exact codecs are:
 - `float64`: the IEEE transform `tau` defined above;
 - `datetime64/timedelta64`: signed tick order with separate `NaT` placement;
 - UUID: two lexicographic `uint64` words representing the full 128-bit integer.
+- bytes/Unicode: stable variable-length MSD radix with an explicit end-of-string
+  digit; Unicode is ordered by its selected encoded/normalized representation.
 
 For fixed-width 64-bit keys, stable radix argsort remains `Theta(N)` and uses
 two index arrays, or `16N` bytes on a 64-bit platform, excluding input keys.
 Arbitrary Python payloads are supported by materializing one supported key per
 object; no Python comparator runs inside the native radix passes.
 
-Multiple fields can be composed by stable multiword radix passes. Enum,
-variable-width string and spatial codecs remain specified but unimplemented in
+Multiple fields can be composed by stable multiword radix passes. Enum ranks
+are explicit integers. Spatial codecs remain specified but unimplemented in
 `EPIC_MONOTONIC_KEYS.md`.
 
 ## 13. Benchmark interpretation

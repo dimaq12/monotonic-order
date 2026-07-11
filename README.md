@@ -105,8 +105,13 @@ permutation = radix_argsort(keys)
 
 `radix_argsort` 0.3 supports exact `uint64`, `int64`, `float64`, NumPy
 `datetime64/timedelta64`, and UUID keys. `radix_lexargsort` composes multiple
-fields with per-field direction and missing-value policy. Enum, string and
-spatial codecs remain tracked in the epic document.
+fields with per-field direction and missing-value policy. Spatial curve codecs
+remain tracked in the epic document.
+
+Version 0.4 adds exact variable-length bytes and Unicode ordering, explicit
+normalization/casefold policy, and integer-ranked Enum helpers. For data already
+stored as a concatenated byte blob plus offsets, use `radix_bytes_argsort` to
+avoid Python key-materialization overhead. See [STRING_RESULTS.md](STRING_RESULTS.md).
 Measured permutation-only results are recorded in
 [ARGSORT_RESULTS.md](ARGSORT_RESULTS.md). Multi-field results are in
 [LEXARGSORT_RESULTS.md](LEXARGSORT_RESULTS.md).

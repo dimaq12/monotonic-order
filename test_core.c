@@ -27,6 +27,13 @@ int main(void) {
     assert(ideal_order_lexargsort_u64(words, 2u, 5u, permutation, index_workspace));
     const size_t lex_expected[] = {1u, 3u, 2u, 4u, 0u};
     for (size_t i = 0; i < 5u; ++i) assert(permutation[i] == lex_expected[i]);
+    const unsigned char text[] = {'b', 'a', 'a', 'a', 'b'};
+    const size_t offsets[] = {0u, 1u, 2u, 4u, 5u}; /* b, a, aa, b */
+    size_t text_permutation[4], text_workspace[4];
+    assert(ideal_order_argsort_bytes(text, sizeof(text), offsets, 4u, 0,
+                                     text_permutation, text_workspace));
+    const size_t text_expected[] = {1u, 2u, 0u, 3u};
+    for (size_t i = 0; i < 4u; ++i) assert(text_permutation[i] == text_expected[i]);
     ideal_order_destroy(order);
     free(tmp); free(out); free(x);
     return 0;

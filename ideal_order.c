@@ -502,3 +502,83 @@ int ideal_order_lexargsort_u64(const unsigned long long *raw_words,
     if (src != indices) memcpy(indices, src, n * sizeof(size_t));
     return 1;
 }
+
+typedef struct ByteSegment {
+    size_t begin;
+    size_t end;
+    size_t depth;
+} ByteSegment;
+
+static size_t byte_digit(const unsigned char *data, const size_t *offsets,
+                         size_t index, size_t depth, int descending) {
+    const size_t length = offsets[index + 1u] - offsets[index];
+    if (depth >= length) return descending ? 256u : 0u;
+    const unsigned value = data[offsets[index] + depth];
+    return descending ? (size_t)(255u - value) : (size_t)(value + 1u);
+}
+
+int ideal_order_argsort_bytes(const unsigned char *data, size_t data_size,
+                              const size_t *offsets, size_t n, int descending,
+                              size_t *indices, size_t *workspace) {
+    if ((n != 0u && (offsets == NULL || indices == NULL || workspace == NULL)) ||
+        indices == workspace || (data_size != 0u && data == NULL)) return 0;
+    if (n == 0u) return 1;
+    if (offsets[0] != 0u || offsets[n] > data_size) return 0;
+    for (size_t i = 0u; i < n; ++i) {
+        if (offsets[i] > offsets[i + 1u]) return 0;
+        indices[i] = i;
+    }
+
+    size_t capacity = 64u;
+    size_t stack_size = 0u;
+    ByteSegment *stack = (ByteSegment *)malloc(capacity * sizeof(*stack));
+    if (stack == NULL) return 0;
+    stack[stack_size++] = (ByteSegment){0u, n, 0u};
+
+    while (stack_size != 0u) {
+        const ByteSegment segment = stack[--stack_size];
+        const size_t length = segment.end - segment.begin;
+        if (length < 2u) continue;
+        size_t counts[257] = {0u};
+        for (size_t pos = segment.begin; pos < segment.end; ++pos) {
+            ++counts[byte_digit(data, offsets, indices[pos], segment.depth, descending)];
+        }
+        size_t starts[257];
+        size_t cursor = segment.begin;
+        for (size_t bucket = 0u; bucket < 257u; ++bucket) {
+            starts[bucket] = cursor;
+            cursor += counts[bucket];
+        }
+        size_t write[257];
+        memcpy(write, starts, sizeof(write));
+        for (size_t pos = segment.begin; pos < segment.end; ++pos) {
+            const size_t index = indices[pos];
+            const size_t digit = byte_digit(data, offsets, index, segment.depth, descending);
+            workspace[write[digit]++] = index;
+        }
+        memcpy(indices + segment.begin, workspace + segment.begin, length * sizeof(size_t));
+
+        const size_t terminal = descending ? 256u : 0u;
+        for (size_t bucket = 0u; bucket < 257u; ++bucket) {
+            if (bucket == terminal || counts[bucket] < 2u) continue;
+            if (stack_size == capacity) {
+                if (capacity > SIZE_MAX / (2u * sizeof(*stack))) {
+                    free(stack);
+                    return 0;
+                }
+                capacity *= 2u;
+                ByteSegment *grown = (ByteSegment *)realloc(stack, capacity * sizeof(*stack));
+                if (grown == NULL) {
+                    free(stack);
+                    return 0;
+                }
+                stack = grown;
+            }
+            stack[stack_size++] = (ByteSegment){starts[bucket],
+                                                starts[bucket] + counts[bucket],
+                                                segment.depth + 1u};
+        }
+    }
+    free(stack);
+    return 1;
+}

@@ -52,6 +52,12 @@ IDEAL_ORDER_API int ideal_order_lexargsort_u64(const unsigned long long *words,
                                                 size_t n_words, size_t n,
                                                 size_t *indices, size_t *workspace);
 
+/* Stable lexicographic order for concatenated variable-length byte strings. */
+IDEAL_ORDER_API int ideal_order_argsort_bytes(const unsigned char *data, size_t data_size,
+                                               const size_t *offsets, size_t n,
+                                               int descending,
+                                               size_t *indices, size_t *workspace);
+
 /* IEEE-754 total-order key used by the exact radix operator. */
 IDEAL_ORDER_API unsigned long long ideal_order_key(double value);
 
