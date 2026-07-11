@@ -15,6 +15,11 @@ int main(void) {
     assert(ideal_order_storage_bytes(order) < 4096u);
     assert(ideal_order_sort(x, n, out, tmp));
     assert(ideal_order_is_sorted(out, n));
+    const unsigned long long keys[] = {3u, 1u, 3u, 2u, 1u};
+    size_t permutation[5], index_workspace[5];
+    assert(ideal_order_argsort_u64(keys, 5u, permutation, index_workspace));
+    const size_t expected[] = {1u, 4u, 3u, 0u, 2u};
+    for (size_t i = 0; i < 5u; ++i) assert(permutation[i] == expected[i]);
     ideal_order_destroy(order);
     free(tmp); free(out); free(x);
     return 0;

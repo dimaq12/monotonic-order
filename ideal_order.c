@@ -432,3 +432,47 @@ size_t ideal_order_unique_sorted(const double *sorted, size_t n, double *out) {
     }
     return written;
 }
+
+int ideal_order_argsort_u64(const unsigned long long *raw_keys, size_t n,
+                            size_t *indices, size_t *workspace) {
+    const uint64_t *keys = (const uint64_t *)raw_keys;
+    if ((n != 0u && (keys == NULL || indices == NULL || workspace == NULL)) ||
+        indices == workspace) return 0;
+    if (n == 0u) return 1;
+
+    int ascending = 1;
+    for (size_t i = 0u; i < n; ++i) {
+        indices[i] = i;
+        if (i != 0u && keys[i] < keys[i - 1u]) ascending = 0;
+    }
+    if (ascending) return 1;
+
+    size_t *src = indices;
+    size_t *dst = workspace;
+    size_t counts[RADIX_SIZE];
+    for (unsigned pass = 0u; pass < RADIX_PASSES; ++pass) {
+        const unsigned shift = pass * RADIX_BITS;
+        const size_t buckets = pass == RADIX_PASSES - 1u
+                                 ? ((size_t)1u << (64u - shift)) : RADIX_SIZE;
+        const uint64_t mask = (uint64_t)(buckets - 1u);
+        memset(counts, 0, buckets * sizeof(size_t));
+        for (size_t i = 0u; i < n; ++i)
+            ++counts[(keys[src[i]] >> shift) & mask];
+        size_t offset = 0u;
+        for (size_t bucket = 0u; bucket < buckets; ++bucket) {
+            const size_t count = counts[bucket];
+            counts[bucket] = offset;
+            offset += count;
+        }
+        for (size_t i = 0u; i < n; ++i) {
+            const size_t index = src[i];
+            const size_t digit = (size_t)((keys[index] >> shift) & mask);
+            dst[counts[digit]++] = index;
+        }
+        size_t *swap = src;
+        src = dst;
+        dst = swap;
+    }
+    if (src != indices) memcpy(indices, src, n * sizeof(size_t));
+    return 1;
+}

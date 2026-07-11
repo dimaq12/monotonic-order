@@ -509,7 +509,38 @@ sort(values)                              # S_N(values)
 
 The C API in `ideal_order.h` exposes the same core without requiring Python.
 
-## 12. Benchmark interpretation
+## 12. Monotonic-key permutation extension
+
+Version 0.2 exposes the key-level operator underlying ordering. For a payload
+sequence `z` and a supported monotonic key sequence `kappa(z)`, define
+
+\[
+\Pi_\kappa(z)=\operatorname{stable\_argsort}(\kappa(z)).
+\]
+
+The ordered payload is
+
+\[
+\boxed{\operatorname{Order}_\kappa(z)=z[\Pi_\kappa(z)].}
+\]
+
+The native kernel moves `size_t` indices rather than payload objects. This
+separates the universal order computation from representation-specific gather
+cost. Current exact codecs are:
+
+- `uint64`: identity key;
+- `int64`: sign-bit flip;
+- `float64`: the IEEE transform `tau` defined above.
+
+For fixed-width 64-bit keys, stable radix argsort remains `Theta(N)` and uses
+two index arrays, or `16N` bytes on a 64-bit platform, excluding input keys.
+Arbitrary Python payloads are supported by materializing one supported key per
+object; no Python comparator runs inside the native radix passes.
+
+Composite, variable-width and spatial codecs are specified in
+`EPIC_MONOTONIC_KEYS.md` and are not part of the current exact implementation.
+
+## 13. Benchmark interpretation
 
 The current recorded benchmark is evidence for one hardware/software regime,
 not an asymptotic proof of universal superiority:

@@ -1,6 +1,9 @@
 include README.md
 include THEORY.md
+include EPIC_MONOTONIC_KEYS.md
+include ARGSORT_RESULTS.md
 include ideal_order.c
 include ideal_order.h
 recursive-include src/ideal_order *.c *.py py.typed
 recursive-include tests *.py
+include benchmark_argsort.py

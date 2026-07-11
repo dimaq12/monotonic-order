@@ -43,6 +43,10 @@ IDEAL_ORDER_API int ideal_order_sort_inplace(double *values, size_t n, double *w
 IDEAL_ORDER_API int ideal_order_is_sorted(const double *values, size_t n);
 IDEAL_ORDER_API size_t ideal_order_unique_sorted(const double *sorted, size_t n, double *out);
 
+/* Stable permutation that orders arbitrary unsigned 64-bit monotonic keys. */
+IDEAL_ORDER_API int ideal_order_argsort_u64(const unsigned long long *keys, size_t n,
+                                             size_t *indices, size_t *workspace);
+
 /* IEEE-754 total-order key used by the exact radix operator. */
 IDEAL_ORDER_API unsigned long long ideal_order_key(double value);
 

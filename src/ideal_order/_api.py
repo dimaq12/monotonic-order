@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import ctypes as ct
-from typing import Iterable
+import operator
+from typing import Iterable, Union
 
 import numpy as np
 from numpy.ctypeslib import ndpointer
@@ -12,6 +13,8 @@ from . import _native
 
 _LIB = ct.CDLL(_native.__file__)
 _F64_1D = ndpointer(dtype=np.float64, ndim=1, flags=("C_CONTIGUOUS", "ALIGNED"))
+_U64_1D = ndpointer(dtype=np.uint64, ndim=1, flags=("C_CONTIGUOUS", "ALIGNED"))
+_UINTP_1D = ndpointer(dtype=np.uintp, ndim=1, flags=("C_CONTIGUOUS", "ALIGNED"))
 
 _LIB.ideal_order_create.argtypes = [_F64_1D, ct.c_size_t, ct.c_size_t]
 _LIB.ideal_order_create.restype = ct.c_void_p
@@ -39,9 +42,104 @@ _LIB.ideal_order_is_sorted.argtypes = [_F64_1D, ct.c_size_t]
 _LIB.ideal_order_is_sorted.restype = ct.c_int
 _LIB.ideal_order_unique_sorted.argtypes = [_F64_1D, ct.c_size_t, _F64_1D]
 _LIB.ideal_order_unique_sorted.restype = ct.c_size_t
+_LIB.ideal_order_argsort_u64.argtypes = [_U64_1D, ct.c_size_t, _UINTP_1D, _UINTP_1D]
+_LIB.ideal_order_argsort_u64.restype = ct.c_int
 
 
-ArrayInput = np.ndarray | Iterable[float]
+ArrayInput = Union[np.ndarray, Iterable[float]]
+
+
+def _monotonic_u64_keys(keys: object, *, descending: bool,
+                        nulls: str) -> np.ndarray:
+    """Encode supported primitive keys into one ascending uint64 coordinate."""
+    if nulls not in {"first", "last", "error"}:
+        raise ValueError("nulls must be 'first', 'last', or 'error'")
+    values = np.asarray(keys)
+    if values.ndim != 1:
+        raise ValueError("keys must be one-dimensional")
+
+    if values.dtype == np.dtype(np.uint64):
+        encoded = np.ascontiguousarray(values)
+        return np.bitwise_not(encoded) if descending else encoded
+
+    if values.dtype == np.dtype(np.int64):
+        bits = np.ascontiguousarray(values).view(np.uint64)
+        encoded = np.bitwise_xor(bits, np.uint64(1 << 63))
+        return np.bitwise_not(encoded) if descending else encoded
+
+    if values.dtype == np.dtype(np.float64):
+        contiguous = np.ascontiguousarray(values)
+        missing = np.isnan(contiguous)
+        if nulls == "error" and np.any(missing):
+            raise ValueError("keys contain NaN while nulls='error'")
+        bits = contiguous.view(np.uint64)
+        sign = (bits & np.uint64(1 << 63)) != 0
+        encoded = np.where(sign, np.bitwise_not(bits),
+                           np.bitwise_xor(bits, np.uint64(1 << 63))).astype(np.uint64)
+        if descending:
+            encoded = np.bitwise_not(encoded)
+        if np.any(missing):
+            encoded[missing] = (np.uint64(0) if nulls == "first"
+                                else np.iinfo(np.uint64).max)
+        return np.ascontiguousarray(encoded)
+
+    raise TypeError("radix_argsort supports exactly uint64, int64, and float64 keys")
+
+
+def radix_argsort(keys: object, *, descending: bool = False,
+                  nulls: str = "last") -> np.ndarray:
+    """Return a stable permutation for supported monotonic numeric keys."""
+    encoded = _monotonic_u64_keys(keys, descending=bool(descending), nulls=nulls)
+    indices = np.empty(encoded.size, dtype=np.uintp)
+    if encoded.size == 0:
+        return indices
+    workspace = np.empty_like(indices)
+    if not _LIB.ideal_order_argsort_u64(encoded, encoded.size, indices, workspace):
+        raise RuntimeError("native radix argsort failed")
+    return indices
+
+
+def apply_order(payload: object, permutation: object, *, axis: int = 0):
+    """Apply a permutation to a NumPy array or a generic Python sequence."""
+    order = np.asarray(permutation)
+    if order.ndim != 1 or order.dtype.kind not in "iu":
+        raise TypeError("permutation must be a one-dimensional integer array")
+    if np.any(order < 0):
+        raise ValueError("permutation indices must be nonnegative")
+    index = np.ascontiguousarray(order, dtype=np.uintp)
+    if index.size:
+        if np.max(index) >= index.size:
+            raise ValueError("permutation must contain every index exactly once")
+        if not np.all(np.bincount(index, minlength=index.size) == 1):
+            raise ValueError("permutation must contain every index exactly once")
+
+    if isinstance(payload, np.ndarray):
+        normalized_axis = operator.index(axis)
+        if normalized_axis < 0:
+            normalized_axis += payload.ndim
+        if normalized_axis < 0 or normalized_axis >= payload.ndim:
+            raise ValueError(f"axis {axis} is out of bounds for dimension {payload.ndim}")
+        if payload.shape[normalized_axis] != index.size:
+            raise ValueError("payload axis length and permutation size differ")
+        return np.take(payload, index, axis=normalized_axis)
+    if axis != 0:
+        raise ValueError("axis is supported only for NumPy arrays")
+    if len(payload) != index.size:  # type: ignore[arg-type]
+        raise ValueError("payload length and permutation size differ")
+    return [payload[int(i)] for i in index]  # type: ignore[index]
+
+
+def order_by(payload: object, *, keys: object | None = None, key=None,
+             descending: bool = False, nulls: str = "last", axis: int = 0):
+    """Stably order arbitrary payloads by a materialized monotonic key."""
+    if (keys is None) == (key is None):
+        raise ValueError("provide exactly one of keys= or key=")
+    if key is not None:
+        if axis != 0:
+            raise ValueError("key callable is supported only for sequence axis 0")
+        keys = np.asarray([key(value) for value in payload])  # type: ignore[union-attr]
+    permutation = radix_argsort(keys, descending=descending, nulls=nulls)
+    return apply_order(payload, permutation, axis=axis)
 
 
 def _array(values: ArrayInput) -> np.ndarray:

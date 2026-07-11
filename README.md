@@ -10,6 +10,9 @@ The complete mathematical specification, proofs of the radix ordering
 contract, approximation boundary and warmed-object semantics are in
 [THEORY.md](THEORY.md).
 
+The planned universal monotonic-key and arbitrary-payload expansion is tracked
+in [EPIC_MONOTONIC_KEYS.md](EPIC_MONOTONIC_KEYS.md).
+
 ## Mathematical contract
 
 The compressed reference operator is
@@ -82,6 +85,29 @@ with IdealOrder(training, n_bins=256) as model:
 
 ordered = sort(np.random.default_rng(2).normal(size=1_000_000))
 ```
+
+Order arbitrary payloads by one monotonic numeric key per item:
+
+```python
+import numpy as np
+from ideal_order import order_by, radix_argsort
+
+records = [{"name": "c", "score": 2},
+           {"name": "a", "score": 1},
+           {"name": "b", "score": 1}]
+
+ordered = order_by(records, key=lambda row: np.int64(row["score"]))
+# a, b, c -- equal score=1 records remain stable
+
+keys = np.array([30, -5, 10], dtype=np.int64)
+permutation = radix_argsort(keys)
+```
+
+`radix_argsort` 0.2 supports exact `uint64`, `int64`, and `float64` keys,
+ascending/descending order, and explicit floating NaN placement. Composite,
+UUID, datetime, string and spatial codecs remain tracked in the epic document.
+Measured permutation-only results are recorded in
+[ARGSORT_RESULTS.md](ARGSORT_RESULTS.md).
 
 ## Native development build
 

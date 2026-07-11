@@ -2,7 +2,7 @@ CC ?= gcc
 CFLAGS ?= -O3 -DNDEBUG -std=c11 -fPIC -march=native -fopenmp -Wall -Wextra -Wpedantic
 LDFLAGS ?= -shared
 
-.PHONY: all clean test package-test wheel asan benchmark benchmark-warmed
+.PHONY: all clean test package-test wheel asan benchmark benchmark-warmed benchmark-argsort
 
 all: libidealorder.so
 
@@ -30,6 +30,10 @@ benchmark: all
 benchmark-warmed: all
 	python3 setup.py build_ext --inplace
 	OMP_NUM_THREADS=3 OMP_PROC_BIND=close OMP_PLACES=cores PYTHONPATH=src python3 benchmark_warmed.py
+
+benchmark-argsort:
+	python3 setup.py build_ext --inplace
+	PYTHONPATH=src python3 benchmark_argsort.py
 
 clean:
 	rm -f libidealorder.so
