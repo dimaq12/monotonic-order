@@ -44,5 +44,5 @@ ideal_order = ["py.typed"]
 ideal_order = ["*.c", "_native.cpython-*.so"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["test_ideal_order.py", "tests"]
 addopts = "-ra"

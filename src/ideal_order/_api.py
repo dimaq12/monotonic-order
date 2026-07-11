@@ -465,12 +465,16 @@ def apply_order(payload: object, permutation: object, *, axis: int = 0):
         raise TypeError("permutation must be a one-dimensional integer array")
     if np.any(order < 0):
         raise ValueError("permutation indices must be nonnegative")
-    index = np.ascontiguousarray(order, dtype=np.uintp)
-    if index.size:
-        if np.max(index) >= index.size:
+    if order.size:
+        # Validate before casting: a uint64 greater than INTP_MAX would wrap on
+        # conversion. np.bincount requires a signed integer dtype on NumPy 2.0.
+        if np.max(order) >= order.size:
             raise ValueError("permutation must contain every index exactly once")
+        index = np.ascontiguousarray(order, dtype=np.intp)
         if not np.all(np.bincount(index, minlength=index.size) == 1):
             raise ValueError("permutation must contain every index exactly once")
+    else:
+        index = np.ascontiguousarray(order, dtype=np.intp)
 
     if isinstance(payload, np.ndarray):
         normalized_axis = operator.index(axis)

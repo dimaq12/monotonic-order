@@ -100,6 +100,9 @@ class PackageTests(unittest.TestCase):
             ideal_order.radix_argsort(np.ones((2, 2), dtype=np.uint64))
         with self.assertRaises(ValueError):
             ideal_order.apply_order([1, 2], [0, 0])
+        with self.assertRaises(ValueError):
+            ideal_order.apply_order([1], np.array([np.iinfo(np.uint64).max],
+                                                   dtype=np.uint64))
 
     def test_randomized_argsort_properties(self):
         for dtype in (np.uint64, np.int64, np.float64):
