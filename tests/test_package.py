@@ -18,7 +18,7 @@ class PackageTests(unittest.TestCase):
         self.assertTrue(np.array_equal(actual[mask], expected[mask]))
 
     def test_public_api_and_version(self):
-        self.assertEqual(ideal_order.__version__, "0.5.0")
+        self.assertEqual(ideal_order.__version__, "0.6.0")
         self.assertIs(ideal_order.sort, IdealOrder.sort)
 
     def test_compact_model_contract(self):
@@ -285,6 +285,59 @@ class PackageTests(unittest.TestCase):
         actual = ideal_order.morton_argsort(points, bounds=bounds, bits=21)
         expected = np.argsort(encoded.keys, kind="stable")
         self.assertTrue(np.array_equal(actual, expected))
+
+    @staticmethod
+    def reference_hilbert(side, x, y):
+        distance = 0
+        scale = side//2
+        while scale:
+            rx = 1 if x & scale else 0
+            ry = 1 if y & scale else 0
+            distance += scale*scale*((3*rx) ^ ry)
+            if ry == 0:
+                if rx == 1:
+                    x = side-1-x
+                    y = side-1-y
+                x, y = y, x
+            scale //= 2
+        return distance
+
+    def test_hilbert_2d_matches_independent_reference(self):
+        for bits in range(1, 6):
+            side = 1 << bits
+            grid = np.array([(x, y) for x in range(side) for y in range(side)],
+                            dtype=np.float64)
+            encoded = ideal_order.hilbert_encode(
+                grid, bounds=((0, side-1), (0, side-1)), bits=bits,
+            )
+            expected = np.array([self.reference_hilbert(side, int(x), int(y))
+                                 for x, y in grid], dtype=np.uint64)
+            self.assertTrue(np.array_equal(encoded.keys, expected))
+            self.assertEqual(np.unique(encoded.keys).size, len(grid))
+
+    def test_hilbert_full_grid_has_unit_neighbor_steps(self):
+        bits = 5
+        side = 1 << bits
+        grid = np.array([(x, y) for x in range(side) for y in range(side)],
+                        dtype=np.float64)
+        bounds = ((0, side-1), (0, side-1))
+        encoded = ideal_order.hilbert_encode(grid, bounds=bounds, bits=bits)
+        ordered = encoded.quantized[ideal_order.radix_argsort(encoded.keys)]
+        manhattan = np.sum(np.abs(np.diff(ordered.astype(np.int64), axis=0)), axis=1)
+        self.assertTrue(np.all(manhattan == 1))
+        self.assertFalse(encoded.exact)
+
+    def test_hilbert_argsort_and_clipping(self):
+        points = self.rng.random((1000, 2))
+        bounds = ((0, 1), (0, 1))
+        encoded = ideal_order.hilbert_encode(points, bounds=bounds, bits=20)
+        actual = ideal_order.hilbert_argsort(points, bounds=bounds, bits=20)
+        self.assertTrue(np.array_equal(actual, np.argsort(encoded.keys, kind="stable")))
+        outside = np.array([[-1.0, 0.5], [0.5, 2.0]])
+        with self.assertRaises(ValueError):
+            ideal_order.hilbert_encode(outside, bounds=bounds, bits=8)
+        clipped = ideal_order.hilbert_encode(outside, bounds=bounds, bits=8, clip=True)
+        self.assertEqual(clipped.clipped_coordinates, 2)
 
 
 if __name__ == "__main__":

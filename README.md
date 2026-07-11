@@ -117,6 +117,20 @@ Version 0.5 adds explicit-bounds Morton 2D/3D encoding. The returned
 `MortonEncoding` includes quantized cells, clipping count and `exact=False` so
 curve ordering cannot be confused with lossless coordinate ordering. See
 [SPATIAL_RESULTS.md](SPATIAL_RESULTS.md).
+
+Version 0.6 adds independently verified Hilbert 2D encoding with the same
+explicit quantization and clipping contract:
+
+```python
+from ideal_order import hilbert_argsort, hilbert_encode
+
+encoded = hilbert_encode(points, bounds=((0, 1), (0, 1)), bits=32)
+permutation = hilbert_argsort(points, bounds=((0, 1), (0, 1)), bits=32)
+```
+
+Hilbert improves consecutive-point locality in the recorded random-cloud
+benchmark, while costing more to encode than Morton. See
+[HILBERT_RESULTS.md](HILBERT_RESULTS.md).
 Measured permutation-only results are recorded in
 [ARGSORT_RESULTS.md](ARGSORT_RESULTS.md). Multi-field results are in
 [LEXARGSORT_RESULTS.md](LEXARGSORT_RESULTS.md).
@@ -130,6 +144,7 @@ make test
 make asan
 make benchmark
 make benchmark-warmed
+make benchmark-hilbert
 ```
 
 For reproducible parallel performance, set `OMP_NUM_THREADS=3`,

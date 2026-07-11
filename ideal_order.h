@@ -58,6 +58,12 @@ IDEAL_ORDER_API int ideal_order_argsort_bytes(const unsigned char *data, size_t 
                                                int descending,
                                                size_t *indices, size_t *workspace);
 
+/* Exact Hilbert distance for quantized 2D coordinates, up to 32 bits/axis. */
+IDEAL_ORDER_API int ideal_order_hilbert2d_u64(const unsigned long long *x,
+                                               const unsigned long long *y,
+                                               size_t n, unsigned bits,
+                                               unsigned long long *out);
+
 /* IEEE-754 total-order key used by the exact radix operator. */
 IDEAL_ORDER_API unsigned long long ideal_order_key(double value);
 

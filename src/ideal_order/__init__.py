@@ -2,10 +2,13 @@
 
 from ._api import (
     IdealOrder,
+    HilbertEncoding,
     MortonEncoding,
     apply_order,
     bottom_k,
     enum_keys,
+    hilbert_argsort,
+    hilbert_encode,
     is_sorted,
     morton_argsort,
     morton_encode,
@@ -20,14 +23,17 @@ from ._api import (
     unique,
 )
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 __all__ = [
     "IdealOrder",
+    "HilbertEncoding",
     "MortonEncoding",
     "apply_order",
     "bottom_k",
     "enum_keys",
+    "hilbert_argsort",
+    "hilbert_encode",
     "is_sorted",
     "morton_argsort",
     "morton_encode",

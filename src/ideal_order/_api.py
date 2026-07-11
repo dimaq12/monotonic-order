@@ -57,6 +57,10 @@ _LIB.ideal_order_argsort_bytes.argtypes = [
     _U8_1D, ct.c_size_t, _UINTP_1D, ct.c_size_t, ct.c_int, _UINTP_1D, _UINTP_1D,
 ]
 _LIB.ideal_order_argsort_bytes.restype = ct.c_int
+_LIB.ideal_order_hilbert2d_u64.argtypes = [
+    _U64_1D, _U64_1D, ct.c_size_t, ct.c_uint, _U64_1D,
+]
+_LIB.ideal_order_hilbert2d_u64.restype = ct.c_int
 
 
 ArrayInput = Union[np.ndarray, Iterable[float]]
@@ -288,6 +292,20 @@ class MortonEncoding:
     exact: bool = False
 
 
+@dataclass(frozen=True)
+class HilbertEncoding:
+    """Quantized Hilbert 2D keys and an explicit loss report."""
+
+    keys: np.ndarray
+    quantized: np.ndarray
+    bounds: np.ndarray
+    bits: int
+    dimensions: int
+    clipped_coordinates: int
+    curve: str = "hilbert"
+    exact: bool = False
+
+
 def _spread_2d(values: np.ndarray) -> np.ndarray:
     x = np.ascontiguousarray(values, dtype=np.uint64)
     x = (x | (x << np.uint64(16))) & np.uint64(0x0000FFFF0000FFFF)
@@ -358,6 +376,59 @@ def morton_argsort(points: object, *, bounds: object, bits: int | None = None,
                    clip: bool = False, descending: bool = False) -> np.ndarray:
     """Stable argsort by a quantized Morton spatial-curve key."""
     encoded = morton_encode(points, bounds=bounds, bits=bits, clip=clip)
+    return radix_argsort(encoded.keys, descending=descending)
+
+
+def _hilbert_2d_keys(quantized: np.ndarray, bits: int) -> np.ndarray:
+    """Native classical xy2d Hilbert state rotation."""
+    x = np.ascontiguousarray(quantized[:, 0], dtype=np.uint64)
+    y = np.ascontiguousarray(quantized[:, 1], dtype=np.uint64)
+    distance = np.empty(len(quantized), dtype=np.uint64)
+    if len(quantized) and not _LIB.ideal_order_hilbert2d_u64(
+            x, y, len(quantized), bits, distance):
+        raise RuntimeError("native Hilbert encoding failed")
+    return distance
+
+
+def hilbert_encode(points: object, *, bounds: object, bits: int = 32,
+                   clip: bool = False) -> HilbertEncoding:
+    """Quantize 2D points and encode their exact Hilbert cell order."""
+    coordinates = np.asarray(points, dtype=np.float64)
+    if coordinates.ndim != 2 or coordinates.shape[1] != 2:
+        raise ValueError("Hilbert points must have shape (N,2)")
+    limits = np.asarray(bounds, dtype=np.float64)
+    if limits.shape != (2, 2):
+        raise ValueError("bounds must have shape (2,2)")
+    if not np.all(np.isfinite(coordinates)) or not np.all(np.isfinite(limits)):
+        raise ValueError("points and bounds must be finite")
+    if np.any(limits[:, 1] <= limits[:, 0]):
+        raise ValueError("every upper bound must exceed its lower bound")
+    selected_bits = operator.index(bits)
+    if selected_bits < 1 or selected_bits > 32:
+        raise ValueError("bits must lie in [1,32] for Hilbert 2D")
+    outside = (coordinates < limits[:, 0]) | (coordinates > limits[:, 1])
+    clipped_coordinates = int(np.count_nonzero(outside))
+    if clipped_coordinates and not clip:
+        raise ValueError("points lie outside bounds; pass clip=True to clamp explicitly")
+    bounded = np.clip(coordinates, limits[:, 0], limits[:, 1]) if clip else coordinates
+    levels = (1 << selected_bits)-1
+    normalized = (bounded-limits[:, 0])/(limits[:, 1]-limits[:, 0])
+    quantized = np.floor(normalized*levels+0.5).astype(np.uint64)
+    keys = _hilbert_2d_keys(quantized, selected_bits)
+    return HilbertEncoding(
+        keys=np.ascontiguousarray(keys),
+        quantized=np.ascontiguousarray(quantized),
+        bounds=limits.copy(),
+        bits=selected_bits,
+        dimensions=2,
+        clipped_coordinates=clipped_coordinates,
+    )
+
+
+def hilbert_argsort(points: object, *, bounds: object, bits: int = 32,
+                    clip: bool = False, descending: bool = False) -> np.ndarray:
+    """Stable argsort by a quantized Hilbert 2D curve key."""
+    encoded = hilbert_encode(points, bounds=bounds, bits=bits, clip=clip)
     return radix_argsort(encoded.keys, descending=descending)
 
 

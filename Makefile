@@ -2,7 +2,7 @@ CC ?= gcc
 CFLAGS ?= -O3 -DNDEBUG -std=c11 -fPIC -march=native -fopenmp -Wall -Wextra -Wpedantic
 LDFLAGS ?= -shared
 
-.PHONY: all clean test package-test wheel asan benchmark benchmark-warmed benchmark-argsort benchmark-lexargsort benchmark-strings benchmark-spatial
+.PHONY: all clean test package-test wheel asan benchmark benchmark-warmed benchmark-argsort benchmark-lexargsort benchmark-strings benchmark-spatial benchmark-hilbert
 
 all: libidealorder.so
 
@@ -46,6 +46,10 @@ benchmark-strings:
 benchmark-spatial:
 	python3 setup.py build_ext --inplace
 	PYTHONPATH=src python3 benchmark_spatial.py
+
+benchmark-hilbert:
+	python3 setup.py build_ext --inplace
+	PYTHONPATH=src python3 benchmark_hilbert.py
 
 clean:
 	rm -f libidealorder.so

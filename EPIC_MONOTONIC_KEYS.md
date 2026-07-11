@@ -1,10 +1,10 @@
 # Epic: Universal Ordering by Monotonic Keys
 
-**Target:** `idealorder` 0.2–0.5
+**Target:** `idealorder` 0.2–0.6
 
 **Status:** numeric Phase 1 shipped in `0.2.0`; multiword/UUID/datetime core
 shipped in `0.3.0`; string/Enum phase shipped in `0.4.0`; Morton shipped in
-`0.5.0`; Hilbert remains planned
+`0.5.0`; Hilbert 2D shipped in `0.6.0`
 
 **Core rule:** arbitrary payloads are never compared in the radix kernel; the
 caller supplies or derives an order-preserving key, and IdealOrder returns a
@@ -352,7 +352,10 @@ Exactness statement:
 - equal quantized cells remain stable;
 - clipping is opt-in and reported by the codec.
 
-Morton ships before Hilbert because it is simpler to verify and vectorize.
+Morton shipped first because it is simpler to verify and vectorize. Hilbert 2D
+now uses a native classical state rotation, independently checked on exhaustive
+small grids. The two codecs intentionally remain separate performance/locality
+choices.
 
 ## 6.8 Byte strings and Unicode strings
 
@@ -523,11 +526,11 @@ random and adversarial record tables.
 **Exit gate:** prefix, empty-string, embedded-zero, long-common-prefix,
 non-ASCII and normalization controls.
 
-## Phase 4 — spatial keys (`0.5.0`)
+## Phase 4 — spatial keys (`0.5.0`–`0.6.0`)
 
 - Morton 2D/3D;
 - spatial quantization report;
-- Hilbert 2D after independent reference verification;
+- Hilbert 2D with independent reference verification;
 - multiword output when dimension × bits exceeds 64.
 
 **Exit gate:** exhaustive small-grid curve order and round-trip cell tests;
@@ -692,7 +695,7 @@ recalibrated with recorded hardware evidence.
 - [x] variable bytes
 - [x] Unicode policy layer
 - [x] Morton 2D/3D
-- [ ] Hilbert 2D independent verification
+- [x] Hilbert 2D independent verification
 
 ### Delivery
 

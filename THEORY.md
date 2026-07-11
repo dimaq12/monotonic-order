@@ -556,7 +556,44 @@ q_j=\left\lfloor
 and interleaves their bits. Ordering of these finite cell keys is exact, while
 the map from continuous coordinates is explicitly lossy. Morton is a spatial
 curve order, not lexicographic coordinate order and not a metric-isometry.
-Hilbert encoding remains planned in `EPIC_MONOTONIC_KEYS.md`.
+
+### 12.1 Hilbert 2D state operator
+
+Hilbert uses the same explicit bounds and quantizer, followed by the classical
+two-dimensional `xy2d` state transition. At scale `s`, let
+
+\[
+r_x=[q_x\mathbin{\&}s\ne0],\qquad
+r_y=[q_y\mathbin{\&}s\ne0].
+\]
+
+The base-four digit contributed at that scale is
+
+\[
+\delta_s=(3r_x)\mathbin{\oplus}r_y,
+\qquad d\leftarrow d+s^2\delta_s.
+\]
+
+If `r_y=0`, the coordinate frame rotates: when `r_x=1`, both axes are first
+reflected across the grid, then the axes are exchanged. Repeating this from
+the most-significant scale to the least-significant scale yields
+
+\[
+H_r(q_x,q_y)\in\{0,\ldots,2^{2r}-1\}.
+\]
+
+For a fixed `r`, this is a bijection on the `2^r` by `2^r` integer grid and
+consecutive curve cells share an edge. The implementation accepts
+`1 <= r <= 32`, so the complete distance fits one `uint64`. Its native state machine is
+verified exhaustively against an independent scalar implementation for grids
+through 32 by 32, including the unit-Manhattan-step invariant.
+
+The exactness boundary is the same as Morton: stable ordering of `H_r` is exact
+for quantized cells, but quantization of continuous points is lossy. Hilbert's
+stronger traversal locality is not a metric isometry and does not preserve all
+nearest-neighbor relations. It also performs more work than Morton's
+vectorizable bit interleaving; the benchmark therefore reports locality and
+encoding time as separate objectives.
 
 ## 13. Benchmark interpretation
 

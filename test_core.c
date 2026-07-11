@@ -34,6 +34,12 @@ int main(void) {
                                      text_permutation, text_workspace));
     const size_t text_expected[] = {1u, 2u, 0u, 3u};
     for (size_t i = 0; i < 4u; ++i) assert(text_permutation[i] == text_expected[i]);
+    const unsigned long long hx[] = {0u, 0u, 1u, 1u};
+    const unsigned long long hy[] = {0u, 1u, 0u, 1u};
+    unsigned long long hd[4];
+    assert(ideal_order_hilbert2d_u64(hx, hy, 4u, 1u, hd));
+    const unsigned long long hd_expected[] = {0u, 1u, 3u, 2u};
+    for (size_t i = 0; i < 4u; ++i) assert(hd[i] == hd_expected[i]);
     ideal_order_destroy(order);
     free(tmp); free(out); free(x);
     return 0;

@@ -13,3 +13,5 @@ include benchmark_strings.py
 include STRING_RESULTS.md
 include benchmark_spatial.py
 include SPATIAL_RESULTS.md
+include benchmark_hilbert.py
+include HILBERT_RESULTS.md

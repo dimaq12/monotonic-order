@@ -582,3 +582,38 @@ int ideal_order_argsort_bytes(const unsigned char *data, size_t data_size,
     free(stack);
     return 1;
 }
+
+int ideal_order_hilbert2d_u64(const unsigned long long *raw_x,
+                              const unsigned long long *raw_y,
+                              size_t n, unsigned bits,
+                              unsigned long long *raw_out) {
+    if (bits == 0u || bits > 32u ||
+        (n != 0u && (raw_x == NULL || raw_y == NULL || raw_out == NULL))) return 0;
+    const uint64_t *xs = (const uint64_t *)raw_x;
+    const uint64_t *ys = (const uint64_t *)raw_y;
+    uint64_t *out = (uint64_t *)raw_out;
+    const uint64_t side = UINT64_C(1) << bits;
+    const uint64_t maximum = side - 1u;
+    for (size_t i = 0u; i < n; ++i) {
+        uint64_t x = xs[i];
+        uint64_t y = ys[i];
+        if (x > maximum || y > maximum) return 0;
+        uint64_t distance = 0u;
+        for (uint64_t scale = side >> 1u; scale != 0u; scale >>= 1u) {
+            const uint64_t rx = (x & scale) != 0u;
+            const uint64_t ry = (y & scale) != 0u;
+            distance += scale * scale * ((3u * rx) ^ ry);
+            if (ry == 0u) {
+                if (rx != 0u) {
+                    x = maximum - x;
+                    y = maximum - y;
+                }
+                const uint64_t swap = x;
+                x = y;
+                y = swap;
+            }
+        }
+        out[i] = distance;
+    }
+    return 1;
+}
