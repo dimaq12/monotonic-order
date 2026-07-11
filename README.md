@@ -103,11 +103,13 @@ keys = np.array([30, -5, 10], dtype=np.int64)
 permutation = radix_argsort(keys)
 ```
 
-`radix_argsort` 0.2 supports exact `uint64`, `int64`, and `float64` keys,
-ascending/descending order, and explicit floating NaN placement. Composite,
-UUID, datetime, string and spatial codecs remain tracked in the epic document.
+`radix_argsort` 0.3 supports exact `uint64`, `int64`, `float64`, NumPy
+`datetime64/timedelta64`, and UUID keys. `radix_lexargsort` composes multiple
+fields with per-field direction and missing-value policy. Enum, string and
+spatial codecs remain tracked in the epic document.
 Measured permutation-only results are recorded in
-[ARGSORT_RESULTS.md](ARGSORT_RESULTS.md).
+[ARGSORT_RESULTS.md](ARGSORT_RESULTS.md). Multi-field results are in
+[LEXARGSORT_RESULTS.md](LEXARGSORT_RESULTS.md).
 
 ## Native development build
 

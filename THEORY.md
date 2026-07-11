@@ -511,7 +511,7 @@ The C API in `ideal_order.h` exposes the same core without requiring Python.
 
 ## 12. Monotonic-key permutation extension
 
-Version 0.2 exposes the key-level operator underlying ordering. For a payload
+Version 0.3 exposes the key-level operator underlying ordering. For a payload
 sequence `z` and a supported monotonic key sequence `kappa(z)`, define
 
 \[
@@ -530,15 +530,18 @@ cost. Current exact codecs are:
 
 - `uint64`: identity key;
 - `int64`: sign-bit flip;
-- `float64`: the IEEE transform `tau` defined above.
+- `float64`: the IEEE transform `tau` defined above;
+- `datetime64/timedelta64`: signed tick order with separate `NaT` placement;
+- UUID: two lexicographic `uint64` words representing the full 128-bit integer.
 
 For fixed-width 64-bit keys, stable radix argsort remains `Theta(N)` and uses
 two index arrays, or `16N` bytes on a 64-bit platform, excluding input keys.
 Arbitrary Python payloads are supported by materializing one supported key per
 object; no Python comparator runs inside the native radix passes.
 
-Composite, variable-width and spatial codecs are specified in
-`EPIC_MONOTONIC_KEYS.md` and are not part of the current exact implementation.
+Multiple fields can be composed by stable multiword radix passes. Enum,
+variable-width string and spatial codecs remain specified but unimplemented in
+`EPIC_MONOTONIC_KEYS.md`.
 
 ## 13. Benchmark interpretation
 

@@ -1,4 +1,5 @@
 import unittest
+import uuid
 
 import numpy as np
 
@@ -16,7 +17,7 @@ class PackageTests(unittest.TestCase):
         self.assertTrue(np.array_equal(actual[mask], expected[mask]))
 
     def test_public_api_and_version(self):
-        self.assertEqual(ideal_order.__version__, "0.2.0")
+        self.assertEqual(ideal_order.__version__, "0.3.0")
         self.assertIs(ideal_order.sort, IdealOrder.sort)
 
     def test_compact_model_contract(self):
@@ -118,6 +119,62 @@ class PackageTests(unittest.TestCase):
         permutation = ideal_order.radix_argsort(np.array([3, 1, 2], dtype=np.int64))
         actual = ideal_order.apply_order(payload, permutation, axis=1)
         self.assertTrue(np.array_equal(actual, [[10, 20, 30], [1, 2, 3]]))
+
+    def test_lexargsort_multiple_fields_and_directions(self):
+        primary = np.array([1, 0, 1, 0, 1], dtype=np.int64)
+        secondary = np.array([2, 3, 1, 3, 1], dtype=np.int64)
+        actual = ideal_order.radix_lexargsort(primary, secondary)
+        self.assertTrue(np.array_equal(actual, [1, 3, 2, 4, 0]))
+        mixed = ideal_order.radix_lexargsort(primary, secondary,
+                                             descending=(False, True))
+        expected = np.asarray(sorted(range(5),
+                                     key=lambda i: (int(primary[i]), -int(secondary[i]))))
+        self.assertTrue(np.array_equal(mixed, expected))
+
+    def test_tuple_key_orders_records_lexicographically(self):
+        records = [
+            {"group": 1, "score": 2, "name": "c"},
+            {"group": 0, "score": 3, "name": "a"},
+            {"group": 1, "score": 1, "name": "b"},
+            {"group": 0, "score": 3, "name": "d"},
+        ]
+        result = ideal_order.order_by(
+            records,
+            key=lambda row: (np.int64(row["group"]), np.int64(row["score"])),
+        )
+        self.assertEqual([row["name"] for row in result], ["a", "d", "b", "c"])
+
+    def test_datetime_and_nat_policies(self):
+        dates = np.array(["2025-01-02", "NaT", "2024-01-01", "2025-01-01"],
+                         dtype="datetime64[D]")
+        ordered = dates[ideal_order.radix_argsort(dates)]
+        self.assertTrue(np.array_equal(ordered[:-1], np.array(
+            ["2024-01-01", "2025-01-01", "2025-01-02"], dtype="datetime64[D]")))
+        self.assertTrue(np.isnat(ordered[-1]))
+        first = dates[ideal_order.radix_argsort(dates, descending=True, nulls="first")]
+        self.assertTrue(np.isnat(first[0]))
+        self.assertTrue(np.array_equal(first[1:], np.array(
+            ["2025-01-02", "2025-01-01", "2024-01-01"], dtype="datetime64[D]")))
+
+    def test_uuid_uses_full_128_bit_integer_order(self):
+        values = [uuid.UUID(int=2**80), uuid.UUID(int=3), uuid.UUID(int=2**80),
+                  uuid.UUID(int=1)]
+        actual = ideal_order.radix_argsort(values)
+        expected = np.asarray(sorted(range(len(values)), key=lambda i: values[i].int))
+        self.assertTrue(np.array_equal(actual, expected))
+        descending = ideal_order.radix_argsort(values, descending=True)
+        expected_desc = np.asarray(sorted(range(len(values)),
+                                          key=lambda i: values[i].int, reverse=True))
+        self.assertTrue(np.array_equal(descending, expected_desc))
+
+    def test_uuid_none_null_policy(self):
+        values = [uuid.UUID(int=2), None, uuid.UUID(int=1), None]
+        last = ideal_order.apply_order(values, ideal_order.radix_argsort(values))
+        self.assertEqual(last[:2], [uuid.UUID(int=1), uuid.UUID(int=2)])
+        self.assertEqual(last[2:], [None, None])
+        first = ideal_order.apply_order(values,
+                                        ideal_order.radix_argsort(values, nulls="first"))
+        self.assertEqual(first[:2], [None, None])
 
 
 if __name__ == "__main__":

@@ -2,7 +2,8 @@
 
 **Target:** `idealorder` 0.2–0.5
 
-**Status:** numeric Phase 1 shipped in `0.2.0`; composite phases planned
+**Status:** numeric Phase 1 shipped in `0.2.0`; multiword/UUID/datetime core
+shipped in `0.3.0`; remaining codecs planned
 
 **Core rule:** arbitrary payloads are never compared in the radix kernel; the
 caller supplies or derives an order-preserving key, and IdealOrder returns a
@@ -662,7 +663,7 @@ recalibrated with recorded hardware evidence.
 
 - [x] C `argsort_u64` serial kernel
 - [ ] C stable OpenMP index scatter
-- [ ] C multiword lexargsort
+- [x] C multiword lexargsort
 - [ ] overflow/allocation guards
 - [ ] C API tests and sanitizers
 
@@ -677,12 +678,12 @@ recalibrated with recorded hardware evidence.
 
 ### Composite codecs
 
-- [ ] `radix_lexargsort`
-- [ ] UUID codec
-- [ ] datetime/timedelta codec
+- [x] `radix_lexargsort`
+- [x] UUID codec
+- [x] datetime/timedelta codec
 - [ ] enum rank codec
 - [ ] structured-record adapter
-- [ ] Python object one-shot key extraction
+- [x] Python object one-shot key extraction
 
 ### Variable-width and spatial codecs
 

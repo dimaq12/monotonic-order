@@ -47,6 +47,11 @@ IDEAL_ORDER_API size_t ideal_order_unique_sorted(const double *sorted, size_t n,
 IDEAL_ORDER_API int ideal_order_argsort_u64(const unsigned long long *keys, size_t n,
                                              size_t *indices, size_t *workspace);
 
+/* Stable lexicographic permutation. Words are [n_words][n], MS word first. */
+IDEAL_ORDER_API int ideal_order_lexargsort_u64(const unsigned long long *words,
+                                                size_t n_words, size_t n,
+                                                size_t *indices, size_t *workspace);
+
 /* IEEE-754 total-order key used by the exact radix operator. */
 IDEAL_ORDER_API unsigned long long ideal_order_key(double value);
 

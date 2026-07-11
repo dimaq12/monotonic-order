@@ -2,7 +2,7 @@ CC ?= gcc
 CFLAGS ?= -O3 -DNDEBUG -std=c11 -fPIC -march=native -fopenmp -Wall -Wextra -Wpedantic
 LDFLAGS ?= -shared
 
-.PHONY: all clean test package-test wheel asan benchmark benchmark-warmed benchmark-argsort
+.PHONY: all clean test package-test wheel asan benchmark benchmark-warmed benchmark-argsort benchmark-lexargsort
 
 all: libidealorder.so
 
@@ -34,6 +34,10 @@ benchmark-warmed: all
 benchmark-argsort:
 	python3 setup.py build_ext --inplace
 	PYTHONPATH=src python3 benchmark_argsort.py
+
+benchmark-lexargsort:
+	python3 setup.py build_ext --inplace
+	PYTHONPATH=src python3 benchmark_lexargsort.py
 
 clean:
 	rm -f libidealorder.so

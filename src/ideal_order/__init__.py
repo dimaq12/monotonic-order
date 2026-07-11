@@ -7,13 +7,14 @@ from ._api import (
     is_sorted,
     order_by,
     radix_argsort,
+    radix_lexargsort,
     sort,
     sort_reverse,
     top_k,
     unique,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     "IdealOrder",
@@ -22,6 +23,7 @@ __all__ = [
     "is_sorted",
     "order_by",
     "radix_argsort",
+    "radix_lexargsort",
     "sort",
     "sort_reverse",
     "top_k",

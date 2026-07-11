@@ -433,22 +433,10 @@ size_t ideal_order_unique_sorted(const double *sorted, size_t n, double *out) {
     return written;
 }
 
-int ideal_order_argsort_u64(const unsigned long long *raw_keys, size_t n,
-                            size_t *indices, size_t *workspace) {
-    const uint64_t *keys = (const uint64_t *)raw_keys;
-    if ((n != 0u && (keys == NULL || indices == NULL || workspace == NULL)) ||
-        indices == workspace) return 0;
-    if (n == 0u) return 1;
-
-    int ascending = 1;
-    for (size_t i = 0u; i < n; ++i) {
-        indices[i] = i;
-        if (i != 0u && keys[i] < keys[i - 1u]) ascending = 0;
-    }
-    if (ascending) return 1;
-
-    size_t *src = indices;
-    size_t *dst = workspace;
+static void radix_argsort_word(const uint64_t *keys, size_t n,
+                               size_t **source, size_t **destination) {
+    size_t *src = *source;
+    size_t *dst = *destination;
     size_t counts[RADIX_SIZE];
     for (unsigned pass = 0u; pass < RADIX_PASSES; ++pass) {
         const unsigned shift = pass * RADIX_BITS;
@@ -472,6 +460,44 @@ int ideal_order_argsort_u64(const unsigned long long *raw_keys, size_t n,
         size_t *swap = src;
         src = dst;
         dst = swap;
+    }
+    *source = src;
+    *destination = dst;
+}
+
+int ideal_order_argsort_u64(const unsigned long long *raw_keys, size_t n,
+                            size_t *indices, size_t *workspace) {
+    const uint64_t *keys = (const uint64_t *)raw_keys;
+    if ((n != 0u && (keys == NULL || indices == NULL || workspace == NULL)) ||
+        indices == workspace) return 0;
+    if (n == 0u) return 1;
+
+    int ascending = 1;
+    for (size_t i = 0u; i < n; ++i) {
+        indices[i] = i;
+        if (i != 0u && keys[i] < keys[i - 1u]) ascending = 0;
+    }
+    if (ascending) return 1;
+
+    size_t *src = indices;
+    size_t *dst = workspace;
+    radix_argsort_word(keys, n, &src, &dst);
+    if (src != indices) memcpy(indices, src, n * sizeof(size_t));
+    return 1;
+}
+
+int ideal_order_lexargsort_u64(const unsigned long long *raw_words,
+                               size_t n_words, size_t n,
+                               size_t *indices, size_t *workspace) {
+    const uint64_t *words = (const uint64_t *)raw_words;
+    if (n_words == 0u || (n != 0u && (words == NULL || indices == NULL || workspace == NULL)) ||
+        indices == workspace || (n != 0u && n_words > SIZE_MAX / n)) return 0;
+    if (n == 0u) return 1;
+    for (size_t i = 0u; i < n; ++i) indices[i] = i;
+    size_t *src = indices;
+    size_t *dst = workspace;
+    for (size_t word = n_words; word-- > 0u;) {
+        radix_argsort_word(words + word * n, n, &src, &dst);
     }
     if (src != indices) memcpy(indices, src, n * sizeof(size_t));
     return 1;

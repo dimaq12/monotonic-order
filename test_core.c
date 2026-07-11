@@ -20,6 +20,13 @@ int main(void) {
     assert(ideal_order_argsort_u64(keys, 5u, permutation, index_workspace));
     const size_t expected[] = {1u, 4u, 3u, 0u, 2u};
     for (size_t i = 0; i < 5u; ++i) assert(permutation[i] == expected[i]);
+    const unsigned long long words[] = {
+        1u, 0u, 1u, 0u, 1u,
+        2u, 3u, 1u, 3u, 1u
+    };
+    assert(ideal_order_lexargsort_u64(words, 2u, 5u, permutation, index_workspace));
+    const size_t lex_expected[] = {1u, 3u, 2u, 4u, 0u};
+    for (size_t i = 0; i < 5u; ++i) assert(permutation[i] == lex_expected[i]);
     ideal_order_destroy(order);
     free(tmp); free(out); free(x);
     return 0;

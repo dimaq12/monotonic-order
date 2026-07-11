@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import ctypes as ct
 import operator
+import uuid as uuid_module
 from typing import Iterable, Union
 
 import numpy as np
@@ -44,28 +45,41 @@ _LIB.ideal_order_unique_sorted.argtypes = [_F64_1D, ct.c_size_t, _F64_1D]
 _LIB.ideal_order_unique_sorted.restype = ct.c_size_t
 _LIB.ideal_order_argsort_u64.argtypes = [_U64_1D, ct.c_size_t, _UINTP_1D, _UINTP_1D]
 _LIB.ideal_order_argsort_u64.restype = ct.c_int
+_LIB.ideal_order_lexargsort_u64.argtypes = [
+    _U64_1D, ct.c_size_t, ct.c_size_t, _UINTP_1D, _UINTP_1D,
+]
+_LIB.ideal_order_lexargsort_u64.restype = ct.c_int
 
 
 ArrayInput = Union[np.ndarray, Iterable[float]]
 
 
-def _monotonic_u64_keys(keys: object, *, descending: bool,
-                        nulls: str) -> np.ndarray:
-    """Encode supported primitive keys into one ascending uint64 coordinate."""
+def _validate_nulls(nulls: str) -> None:
     if nulls not in {"first", "last", "error"}:
         raise ValueError("nulls must be 'first', 'last', or 'error'")
+
+
+def _null_word(missing: np.ndarray, nulls: str) -> np.ndarray:
+    if nulls == "last":
+        return np.ascontiguousarray(missing, dtype=np.uint64)
+    return np.ascontiguousarray(~missing, dtype=np.uint64)
+
+
+def _field_words(keys: object, *, descending: bool, nulls: str) -> list[np.ndarray]:
+    """Encode one semantic field as most-significant-first uint64 words."""
+    _validate_nulls(nulls)
     values = np.asarray(keys)
     if values.ndim != 1:
         raise ValueError("keys must be one-dimensional")
 
     if values.dtype == np.dtype(np.uint64):
         encoded = np.ascontiguousarray(values)
-        return np.bitwise_not(encoded) if descending else encoded
+        return [np.bitwise_not(encoded) if descending else encoded]
 
     if values.dtype == np.dtype(np.int64):
         bits = np.ascontiguousarray(values).view(np.uint64)
         encoded = np.bitwise_xor(bits, np.uint64(1 << 63))
-        return np.bitwise_not(encoded) if descending else encoded
+        return [np.bitwise_not(encoded) if descending else encoded]
 
     if values.dtype == np.dtype(np.float64):
         contiguous = np.ascontiguousarray(values)
@@ -79,24 +93,102 @@ def _monotonic_u64_keys(keys: object, *, descending: bool,
         if descending:
             encoded = np.bitwise_not(encoded)
         if np.any(missing):
-            encoded[missing] = (np.uint64(0) if nulls == "first"
-                                else np.iinfo(np.uint64).max)
-        return np.ascontiguousarray(encoded)
+            encoded[missing] = 0
+            return [_null_word(missing, nulls), np.ascontiguousarray(encoded)]
+        return [np.ascontiguousarray(encoded)]
 
-    raise TypeError("radix_argsort supports exactly uint64, int64, and float64 keys")
+    if values.dtype.kind in "Mm" and values.dtype.itemsize == 8:
+        contiguous = np.ascontiguousarray(values)
+        missing = np.isnat(contiguous)
+        if nulls == "error" and np.any(missing):
+            raise ValueError("keys contain NaT while nulls='error'")
+        ticks = contiguous.view(np.int64)
+        encoded = np.bitwise_xor(ticks.view(np.uint64), np.uint64(1 << 63))
+        if descending:
+            encoded = np.bitwise_not(encoded)
+        if np.any(missing):
+            encoded[missing] = 0
+            return [_null_word(missing, nulls), np.ascontiguousarray(encoded)]
+        return [np.ascontiguousarray(encoded)]
+
+    if values.dtype.kind == "O":
+        missing = np.zeros(values.size, dtype=bool)
+        high = np.zeros(values.size, dtype=np.uint64)
+        low = np.zeros(values.size, dtype=np.uint64)
+        for index, value in enumerate(values):
+            if value is None:
+                missing[index] = True
+            elif isinstance(value, uuid_module.UUID):
+                high[index] = np.uint64(value.int >> 64)
+                low[index] = np.uint64(value.int & ((1 << 64)-1))
+            else:
+                raise TypeError("object keys must be UUID values or None")
+        if nulls == "error" and np.any(missing):
+            raise ValueError("keys contain None while nulls='error'")
+        if descending:
+            high = np.bitwise_not(high)
+            low = np.bitwise_not(low)
+        words = [np.ascontiguousarray(high), np.ascontiguousarray(low)]
+        if np.any(missing):
+            words.insert(0, _null_word(missing, nulls))
+        return words
+
+    raise TypeError("unsupported key dtype; use uint64, int64, float64, datetime64, "
+                    "timedelta64, or UUID")
+
+
+def _native_lexargsort(words: list[np.ndarray]) -> np.ndarray:
+    if not words:
+        raise ValueError("at least one encoded key word is required")
+    size = words[0].size
+    if any(word.size != size for word in words):
+        raise ValueError("all key fields must have equal length")
+    indices = np.empty(size, dtype=np.uintp)
+    if size == 0:
+        return indices
+    workspace = np.empty_like(indices)
+    if len(words) == 1:
+        key = np.ascontiguousarray(words[0], dtype=np.uint64)
+        if not _LIB.ideal_order_argsort_u64(key, size, indices, workspace):
+            raise RuntimeError("native radix argsort failed")
+        return indices
+    matrix = np.ascontiguousarray(np.vstack(words), dtype=np.uint64)
+    flat = matrix.ravel()
+    if not _LIB.ideal_order_lexargsort_u64(flat, len(words), size, indices, workspace):
+        raise RuntimeError("native radix lexargsort failed")
+    return indices
 
 
 def radix_argsort(keys: object, *, descending: bool = False,
                   nulls: str = "last") -> np.ndarray:
     """Return a stable permutation for supported monotonic numeric keys."""
-    encoded = _monotonic_u64_keys(keys, descending=bool(descending), nulls=nulls)
-    indices = np.empty(encoded.size, dtype=np.uintp)
-    if encoded.size == 0:
-        return indices
-    workspace = np.empty_like(indices)
-    if not _LIB.ideal_order_argsort_u64(encoded, encoded.size, indices, workspace):
-        raise RuntimeError("native radix argsort failed")
-    return indices
+    return _native_lexargsort(_field_words(keys, descending=bool(descending), nulls=nulls))
+
+
+def _field_options(option: object, count: int, name: str) -> list[object]:
+    if isinstance(option, (str, bool, np.bool_)):
+        return [option] * count
+    result = list(option)  # type: ignore[arg-type]
+    if len(result) != count:
+        raise ValueError(f"{name} must have one entry per key field")
+    return result
+
+
+def radix_lexargsort(*key_fields: object, descending: object = False,
+                     nulls: object = "last") -> np.ndarray:
+    """Stable lexicographic argsort; fields are most-significant first."""
+    if not key_fields:
+        raise ValueError("provide at least one key field")
+    directions = _field_options(descending, len(key_fields), "descending")
+    null_policies = _field_options(nulls, len(key_fields), "nulls")
+    words: list[np.ndarray] = []
+    for field, reverse, null_policy in zip(key_fields, directions, null_policies):
+        if not isinstance(reverse, (bool, np.bool_)):
+            raise TypeError("descending entries must be bool")
+        if not isinstance(null_policy, str):
+            raise TypeError("nulls entries must be strings")
+        words.extend(_field_words(field, descending=bool(reverse), nulls=null_policy))
+    return _native_lexargsort(words)
 
 
 def apply_order(payload: object, permutation: object, *, axis: int = 0):
@@ -137,7 +229,16 @@ def order_by(payload: object, *, keys: object | None = None, key=None,
     if key is not None:
         if axis != 0:
             raise ValueError("key callable is supported only for sequence axis 0")
-        keys = np.asarray([key(value) for value in payload])  # type: ignore[union-attr]
+        materialized = [key(value) for value in payload]  # type: ignore[union-attr]
+        if materialized and isinstance(materialized[0], tuple):
+            width = len(materialized[0])
+            if any(not isinstance(item, tuple) or len(item) != width for item in materialized):
+                raise TypeError("all composite keys must be tuples of equal length")
+            fields = [np.asarray([item[column] for item in materialized])
+                      for column in range(width)]
+            permutation = radix_lexargsort(*fields, descending=descending, nulls=nulls)
+            return apply_order(payload, permutation, axis=axis)
+        keys = np.asarray(materialized)
     permutation = radix_argsort(keys, descending=descending, nulls=nulls)
     return apply_order(payload, permutation, axis=axis)
 
