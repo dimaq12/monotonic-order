@@ -5,13 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "idealorder"
 version = "0.6.0"
-description = "Compact distribution model and exact stable float64 order operations"
+description = "Stable native radix ordering for monotonic keys and compact quantile models"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
   { name = "Dmitry Sierikov" },
 ]
-keywords = ["sorting", "statistics", "quantiles", "radix-sort", "numpy"]
+keywords = ["sorting", "statistics", "quantiles", "radix-sort", "numpy", "hilbert-curve"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
@@ -29,6 +29,9 @@ build = ["build>=1", "wheel"]
 
 [project.urls]
 Repository = "https://github.com/dimaq12/order"
+Issues = "https://github.com/dimaq12/order/issues"
+Changelog = "https://github.com/dimaq12/order/blob/main/CHANGELOG.md"
+Theory = "https://github.com/dimaq12/order/blob/main/THEORY.md"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

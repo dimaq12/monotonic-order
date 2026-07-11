@@ -1,0 +1,29 @@
+name: Feature request
+description: Propose a codec, operator, performance improvement, or integration
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and use case
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: Proposed ordering contract
+      description: Define the intended order, key representation and exactness boundary.
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: Independent reference or validation strategy
+    validations:
+      required: true
+  - type: textarea
+    id: performance
+    attributes:
+      label: Performance expectations
+      description: Include relevant input sizes, distributions and comparison baseline.
